@@ -492,8 +492,7 @@ function App() {
           <div className="title">
             <div>
               <h1>
-                {selected?.title ||
-                  (page === "Обзор" ? "Обзор обучения" : page)}
+                {selected?.title || page}
               </h1>
               <p>
                 {selected

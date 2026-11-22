@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { AsideHeader, MobileHeader } from "@gravity-ui/navigation";
 import { Avatar, User } from "@gravity-ui/uikit";
-import { BookOpen, Code, Layers, LayoutCells } from "@gravity-ui/icons";
+import { Code, Database, GraduationCap, House, ListCheck } from "@gravity-ui/icons";
 
 const narrowScreen = window.matchMedia("(max-width: 880px)");
 const pages = [
-  { id: "Обзор", icon: LayoutCells },
-  { id: "Предметы", icon: Layers },
-  { id: "Практические работы", icon: BookOpen },
+  { id: "Обзор", icon: House },
+  { id: "Предметы", icon: GraduationCap },
+  { id: "Практические работы", icon: ListCheck },
 ];
 
 export function WorkspaceNavigation({ page, go, teacher, children }) {
@@ -18,7 +18,7 @@ export function WorkspaceNavigation({ page, go, teacher, children }) {
     narrowScreen.addEventListener("change", update);
     return () => narrowScreen.removeEventListener("change", update);
   }, []);
-  const links = teacher ? [...pages, {id: "Банк задач и тестов", icon: Code}] : pages;
+  const links = teacher ? [...pages, {id: "Банк задач и тестов", icon: Database}] : pages;
   const items = links.map(({ id, icon }) => ({
     id,
     icon,
