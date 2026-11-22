@@ -1,6 +1,8 @@
 # Working on the student programming platform
 
-Read [requirements.md](requirements.md) before changing product behavior. It contains the requested stack and the supplied Russian specification. Its final section, “Последующие доработки”, records questions and enhancements awaiting agreement. [PLAN.md](PLAN.md) gives a suggested implementation order. Earlier brainstorming about Python submissions, contest points, and leaderboards does not define the product.
+Read [requirements.md](docs/requirements.md) before changing product behavior. It contains the requested stack and the supplied Russian specification. Its final section, “Последующие доработки”, records questions and enhancements awaiting agreement. [PLAN.md](docs/PLAN.md) gives a suggested implementation order. Earlier brainstorming about Python submissions, contest points, and leaderboards does not define the product.
+
+For UI changes, read the [frontend development guide](docs/development.md). It records the component choices, interaction patterns and verification workflow agreed for this project. The current deliverable is a React and Vite frontend with browser-local demo data. FastAPI, PostgreSQL, Docker and the judging service belong to later milestones.
 
 ## Domain vocabulary
 
@@ -11,8 +13,8 @@ Read [requirements.md](requirements.md) before changing product behavior. It con
 
 ## Making changes
 
-Trace changes through the affected student or teacher workflow, FastAPI checks, and persisted PostgreSQL state. Use Gravity UI for both roles and Vite for local frontend development. Keep Docker startup aligned with the services actually present.
+Follow the affected workflow from its entry point through rendering and persistence. Reuse existing project components and check the official Gravity UI ecosystem before implementing a control. Verify the API against the installed package version. Preserve previously saved subjects and attempts when changing data formats.
 
 If a task depends on an unresolved rule, identify the matching item in “Последующие доработки” and ask for a decision on that behavior. Continue independent work. When a rule is agreed, update the requirements and its acceptance scenario together.
 
-Run checks for the affected workflow and report the commands and results. This workspace starts with documentation only. Add concrete startup and test commands when the corresponding implementation exists.
+Run checks for the affected workflow and report the commands and results. The frontend uses local demonstration data. With Node.js 22 and npm installed, run `npm ci` once, `npm run dev` for the Vite development server, and `npm run build` to verify the production bundle.

@@ -1,0 +1,343 @@
+* {
+  box-sizing: border-box;
+}
+.workspace {
+  min-height: 100vh;
+  background: #f6f8fc;
+}
+.workspaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  /* Match the bottom divider of the default Gravity UI AsideHeader. */
+  height: 58px;
+  padding: 0 clamp(16px, 3vw, 48px);
+  background: var(--g-color-base-background);
+  border-bottom: 1px solid var(--g-color-line-generic);
+}
+.workspaceHeader > :last-child { margin-inline-start: auto; }
+.profile {
+  padding: 8px;
+}
+article {
+  max-width: 1500px;
+  margin: auto;
+  padding: 32px clamp(16px, 3vw, 48px) 50px;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+.title,
+.sectionTitle,
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.title {
+  margin-bottom: 30px;
+}
+h1 {
+  font-size: clamp(29px, 3vw, 42px);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+.title p,
+.cardText > span,
+.cardFoot {
+  color: var(--g-color-text-secondary);
+}
+.title p {
+  margin-top: 8px;
+}
+.sectionTitle {
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+h2 {
+  font-size: 21px;
+  line-height: 1.25;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.card,
+.workList,
+.deadlines,
+.subjectInfo > div {
+  background: var(--g-color-base-background);
+}
+.card {
+  overflow: hidden;
+}
+.cover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 112px;
+  background-image:
+    linear-gradient(#ffffff50 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff50 1px, transparent 1px);
+  background-size: 19px 19px;
+}
+.cover-blue {
+  background-color: #c0d0ff;
+  color: #304bd1;
+}
+.cover-green {
+  background-color: #b7efdc;
+  color: #1f8069;
+}
+.cover-purple {
+  background-color: #dfd1fb;
+  color: #795cb3;
+}
+.subjectGroups { display: grid; gap: 4px; margin-top: 10px; }
+.groupLabels, .groupMeasure { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.groupLabels { position: relative; min-width: 0; overflow: hidden; }
+.groupMeasure { position: absolute; left: 0; width: max-content; visibility: hidden; }
+.cardText {
+  padding: 16px;
+}
+.cardText h3 {
+  min-height: 2.5em;
+  font-size: 17px;
+  line-height: 1.25;
+}
+.cardText > span,
+.cardFoot {
+  font-size: 12px;
+}
+.cardFoot {
+  border-top: 1px solid var(--g-color-line-generic);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.cardFoot span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(215px, 1fr);
+  gap: 22px;
+  margin-top: 32px;
+}
+.workList {
+  overflow: auto;
+}
+.workName,
+.deadlineItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.workName > span {
+  padding-inline-start: 8px;
+}
+.deadlines,
+.subjectInfo > div {
+  padding: 16px;
+}
+.deadlines {
+  height: fit-content;
+}
+.deadlineItem {
+  padding-block: 6px;
+  white-space: normal;
+}
+.deadlines .sectionTitle h2 {
+  font-size: 18px;
+}
+.activity {
+  display: grid;
+  gap: 15px;
+  width: 100%;
+}
+.code-editor {
+  width: 100%;
+  height: clamp(220px, 48vh, 620px);
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.activity > div {
+  min-width: 0;
+}
+.activity pre:not(.markdownContent pre) {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  margin-top: 6px;
+  padding: 13px;
+  background: #182235;
+  color: #e5ebff;
+  border: none;
+  border-radius: 8px;
+  font: 14px/1.6 monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.activity .note {
+  padding: 0;
+  font-size: 12px;
+}
+.activity label {
+  display: grid;
+  gap: 5px;
+}
+.subjectForm {
+  width: 100%;
+  display: grid;
+  gap: 17px;
+}
+.subjectTitleInput { width: 100%; }
+.subjectTitleRow { margin: 0; }
+.subjectForm .subjectTitleRow > :first-child { margin-top: -1.55em; align-self: flex-start; background: var(--g-color-base-background); padding-inline: 5px; }
+.subjectForm fieldset, .subjectForm .subjectTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 12px;
+  border: 1px solid #dce2ec;
+  border-radius: 8px;
+  margin: 0;
+  min-width: 0;
+}
+.subjectForm .subjectTitleRow { flex-wrap: nowrap; gap: 0; margin-top: .65em; }
+.subjectForm legend {
+  padding: 0 5px;
+}
+
+.subjectInfo {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+.markdownContent {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.markdownContent > * { margin-block: .6em; }
+.markdownContent pre, .markdownContent table, .markdownContent .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.markdownContent pre {
+  padding: 10px;
+  background: var(--g-color-base-generic);
+}
+.markdownContent th, .markdownContent td {
+  padding: 4px 8px;
+  border: 1px solid var(--g-color-line-generic);
+}
+.markdownContent img { max-width: 100%; }
+.subjectForm .markdownField { display: block; }
+
+@media (max-width: 880px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .cover {
+    height: 100%;
+  }
+  .cover svg {
+    width: 44px;
+  }
+  .cardText h3 {
+    min-height: 0;
+  }
+  .title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .workspaceHeader {
+    padding-inline: 10px;
+  }
+}
+
+.workspacePage {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  --page-gutter: max(16px, calc((100% - 840px) / 2));
+  background: var(--g-color-base-background);
+}
+.workspacePageHeader, .workspacePageActions {
+  padding: 12px var(--page-gutter);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.workspacePageHeader { border-bottom: 1px solid var(--g-color-line-generic); }
+.workspacePageHeader h1 { margin: 0; letter-spacing: normal; overflow-wrap: anywhere; }
+.workspacePageBody { overflow: auto; padding: 24px var(--page-gutter); }
+.workspacePageActions { justify-content: flex-end; border-top: 1px solid var(--g-color-line-generic); }
+.activity > .g-button { justify-self: start; }
+
+.subjectAccess {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.subjectForm { gap: 24px; }
+.subjectForm legend { font-weight: 500; }
+@media (max-width: 620px) {
+  .subjectAccess { grid-template-columns: minmax(0, 1fr); }
+  .workspacePageActions > button { flex: 1; }
+}
+
+.cover-orange { background-color: var(--g-color-base-warning-medium); color: var(--g-color-text-warning-heavy); }
+.cover-gray { background-color: var(--g-color-base-misc-medium); color: var(--g-color-text-misc-heavy); }
+.cover-red { background-color: #ffc6c4; color: #a82c33; }
+.cover-yellow { background-color: #fae897; color: #745500; }
+.cover-teal { background-color: #a8e4e5; color: #106771; }
+.cover-pink { background-color: #f9cee2; color: #983265; }
+.cover-indigo { background-color: #c5c1ef; color: #493b97; }
+.coverSwatch { display:block; width:20px; height:20px; border-radius:50%; border:1px solid currentColor; }
+.subjectForm .coverPicker { display:grid; grid-template-columns:minmax(150px, 1fr) minmax(0, 2fr); align-items:center; }
+.coverControls { display:grid; grid-template-columns:minmax(0, 1fr); gap:8px; }
+.coverControls .g-button__text { flex:1; text-align:start; }
+.coverPalette { padding: 8px; }
+.coverPicker .cover { border-radius:8px; height:120px; }
+@media (max-width:620px) {
+  .subjectForm .coverPicker { grid-template-columns:minmax(0,1fr); }
+  .coverPicker .cover { height:76px; }
+}
+
+.subjectForm .semesterFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.semesterFields .gc-form-row { margin: 0; }
+
+.subjectForm .assignmentBlock { display: grid; gap: 16px; }
+.assignmentBlock > .g-button { justify-self: start; }
+.assignmentPair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.assignmentControls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.assignmentBlock .gc-form-row { margin: 0; }
+.workspacePageActions:has([role="alert"]) { flex-wrap: wrap; }
+.workspacePageActions [role="alert"] { color: var(--g-color-text-danger); margin-right: auto; }
+@media (max-width: 600px) {
+  .assignmentPair, .subjectForm .assignmentPair { grid-template-columns: minmax(0, 1fr); }
+  .sectionTitle:has(.assignmentControls) { flex-wrap: wrap; gap: 8px; }
+}
