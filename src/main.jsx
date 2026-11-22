@@ -6,6 +6,7 @@ import {
   Label,
   Table,
   Text,
+  TextInput,
   Icon,
   Select,
   Toaster,
@@ -27,6 +28,7 @@ import { subjects, works as demoWorks, deadline, starter } from "./data";
 
 import { SubjectCover, coverSettings } from "./SubjectCover";
 import { currentSemester, inCurrentSemester, semesterLabel } from "./semester";
+import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
 import { TaskBank, collectTasks } from "./TaskBank";
@@ -93,6 +95,9 @@ function App() {
   const savedWorks = bank.works;
   const bankTasks = bank.tasks;
   const [creatingWork, setCreatingWork] = useState(false);
+  const [workSubject,setWorkSubject] = useState("");
+  const [workQuery,setWorkQuery] = useState("");
+  const catalogue = page === "Практические работы";
   const works = [...demoWorks, ...savedWorks];
   const [now, setNow] = useState(Date.now);
   React.useEffect(() => {
@@ -135,9 +140,12 @@ function App() {
   const displayWorks = visibleWorks.filter(
     (w) =>
       (!selected || w.subject === selected.id) &&
+      (!catalogue || ((!workSubject || w.subject === workSubject) && w.title.toLowerCase().includes(workQuery.trim().toLowerCase()))) &&
       (filter === "Все статусы" || filter === state(w)),
   );
   function go(next, s = null) {
+    setWorkSubject("");
+    setWorkQuery("");
     pageSet(next);
     select(s);
     filterSet("Все статусы");
@@ -169,13 +177,18 @@ function App() {
     showSettings(false);
     go("Предметы", saved.teachers.includes(demoTeacher) ? saved : null);
   }
-  if (creatingWork && selected && teacher) {
-    return <AssignmentForm subject={selected} bankTasks={bankTasks.filter(task => task.subject === selected.id)} onClose={() => setCreatingWork(false)} onSave={work => {
+  if (creatingWork && teacher) {
+    return <AssignmentForm subject={selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks} onClose={() => setCreatingWork(false)} onSave={work => {
       const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
-        .map(item => ({...item, subject:selected.id}));
+        .map(item => ({...item, subject:work.subject}));
       const activities = work.activities.map(item => item.kind === "program"
         ? {...item, taskId:item.taskId ?? item.id} : item);
       updateLibrary(current => ({...current, tasks:[...current.tasks,...newTasks], works:[...current.works,{...work,activities}]}));
+      if (catalogue) {
+        if (workSubject) setWorkSubject(work.subject);
+        setWorkQuery("");
+      }
+      setNow(Date.now());
       setCreatingWork(false);
       filterSet("Все статусы");
     }}/>;
@@ -292,7 +305,6 @@ function App() {
     </div>
   );
   const table = (
-    <Card className="workList">
       <Table
         aria-label="Практические работы"
         width="max"
@@ -301,7 +313,7 @@ function App() {
         data={displayWorks}
         getRowDescriptor={(w) => ({ id: w.id })}
         onRowClick={open}
-        emptyMessage={overview && filter === "Все статусы" ? "Сейчас нет работ с открытым сроком начала попыток." : "Работ пока нет."}
+        emptyMessage={catalogue && (workQuery.trim() || workSubject || filter !== "Все статусы") ? "По выбранным условиям работ нет." : overview && filter === "Все статусы" ? "Сейчас нет работ с открытым сроком начала попыток." : "Работ пока нет."}
         columns={[
           {
             id: "title",
@@ -336,7 +348,6 @@ function App() {
           }]),
         ]}
       />
-    </Card>
   );
   const filters = (
     <Select
@@ -378,6 +389,21 @@ function App() {
   if (teacher && page === "Банк задач") {
     return <TaskBank subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
   }
+  if (catalogue) {
+    return renderWorkspace(<article className="bankPage">
+      <h1>Практические работы</h1>
+      <div className="assignmentControls">
+        <SubjectFilter subjects={all} value={workSubject} onChange={setWorkSubject}/>
+        {!teacher && filters}
+        {teacher && <Button view="action" disabled={!all.length} onClick={() => setCreatingWork(true)}>
+          Создать практическую работу
+        </Button>}
+      </div>
+      <TextInput controlProps={{"aria-label":"Поиск по практическим работам"}} placeholder="Найти по названию работы"
+        value={workQuery} onUpdate={setWorkQuery} hasClear/>
+      {table}
+    </article>);
+  }
   return renderWorkspace(<article>
           <div className="title">
             <div>
@@ -395,7 +421,7 @@ function App() {
                       : "Задания по всем предметам."}
               </p>
             </div>
-            {teacher && page !== "Практические работы" && (
+            {teacher && (
               <Button view={selected ? "outlined" : "action"} onClick={() => showSettings(true)}>
                 {!selected && (
                   <Button.Icon>
@@ -406,7 +432,7 @@ function App() {
               </Button>
             )}
           </div>
-          {!selected && page !== "Практические работы" && (
+          {!selected && (
             <section>
               {page === "Обзор" && (
                 <div className="sectionTitle">
@@ -422,7 +448,7 @@ function App() {
               {listedSubjects.length ? cards : <p>Предметов пока нет.</p>}
             </section>
           )}
-          {(page === "Обзор" || page === "Практические работы" || selected) && (
+          {(overview || selected) && (
             <section className={overview ? "overviewWorks" : undefined}>
               <div className="sectionTitle">
                 <h2>Практические работы</h2>
@@ -432,7 +458,7 @@ function App() {
                   </Button>}
                 </div>
               </div>
-              {table}
+              <Card className="workList">{table}</Card>
             </section>
           )}
           {selected && (

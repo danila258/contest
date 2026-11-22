@@ -1,3 +1,4 @@
+import {SubjectFilter} from "./SubjectFilter";
 import React, {lazy, Suspense, useRef, useState} from "react";
 import {Button, Select, Table, TextInput} from "@gravity-ui/uikit";
 import {ActivityFields, Input, newActivity} from "./AssignmentActivities";
@@ -125,8 +126,7 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
     <div className="assignmentControls">
       <Select aria-label="Раздел банка" value={[section]} options={[{value:"tasks",content:"Задачи по программированию"},{value:"questions",content:"Теоретические вопросы"}]}
         onUpdate={([value]) => {setSection(value); setQuery(""); setMessage("");}}/>
-      <Select aria-label="Фильтр по предмету" filterable value={[subject]} options={[{value:"",content:"Все предметы"},...options(subjects)]}
-        onUpdate={([value]) => {setSubject(value); setMessage("");}}/>
+      <SubjectFilter subjects={subjects} value={subject} onChange={value => {setSubject(value); setMessage("");}}/>
       <Button view="action" disabled={!subjects.length} onClick={() => edit({...(
         isTasks ? newActivity("program") : {id:crypto.randomUUID(),kind:"theory",title:"",prompt:"",taskIds:[]}
       ),subject:subject || subjects[0].id})}>{isTasks ? "Создать задачу" : "Создать вопрос"}</Button>

@@ -27,7 +27,9 @@ export function contentError(items) {
   return "";
 }
 
-export function AssignmentForm({subject, bankTasks, onClose, onSave}) {
+export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, onClose, onSave}) {
+  const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
+  const availableTasks = bankTasks.filter(task => task.subject === subjectId);
   const [title,setTitle] = useState("");
   const [opens,setOpens] = useState(() => localMinute(new Date()));
   const [due,setDue] = useState("");
@@ -49,7 +51,7 @@ export function AssignmentForm({subject, bankTasks, onClose, onSave}) {
     setSaveError("");
     if (error) return;
     try {
-      onSave({id:crypto.randomUUID(), subject:subject.id, title:title.trim(), opensAt:new Date(opens).toISOString(),
+      onSave({id:crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:new Date(opens).toISOString(),
       dueAt:new Date(due).toISOString(), sequential, review, activities:items});
     } catch (failure) {
       if (!(failure instanceof DOMException)) throw failure;
@@ -62,7 +64,11 @@ export function AssignmentForm({subject, bankTasks, onClose, onSave}) {
     <Button size="xl" view="action" type="submit" extraProps={{form:"assignment-form"}}>Создать</Button>
   </>}>
     <form id="assignment-form" className="subjectForm" onSubmit={submit}>
-      <span>{subject.title}</span>
+      {subject ? <span>{subject.title}</span> : <fieldset><legend>Предмет</legend>
+        <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
+          options={subjects.map(s => ({value:s.id, content:s.title}))} onUpdate={([id]) => setSubjectId(id)}/>
+        {items.some(item => item.taskId) && <span>Чтобы сменить предмет, отсоедините задачи из его банка.</span>}
+      </fieldset>}
       <FormRow className="subjectTitleRow" direction="column" label="Название работы" fieldId="assignment-title" required>
         <TextInput id="assignment-title" size="l" autoFocus controlProps={{required:true}} value={title} onUpdate={setTitle} placeholder="Например, поиск в отсортированном массиве"/>
       </FormRow>
@@ -85,9 +91,9 @@ export function AssignmentForm({subject, bankTasks, onClose, onSave}) {
         {item.taskId ? <strong>{item.title}</strong> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
       <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}
-        options={bankTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
+        options={availableTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
         onUpdate={([id]) => {
-          const task = bankTasks.find(entry => entry.id === id);
+          const task = availableTasks.find(entry => entry.id === id);
           if (task) setItems([...items, {...task, taskId:id, id:crypto.randomUUID()}]);
         }}/>
       <div className="assignmentControls">{[["quiz","Добавить тест"],["program","Добавить задачу"]].map(([kind,label]) =>
