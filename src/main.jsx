@@ -19,7 +19,6 @@ import {
   ChevronRight,
   Code,
   ListUl,
-  Plus,
   ArrowLeft,
 } from "@gravity-ui/icons";
 import "@gravity-ui/uikit/styles/fonts.css";
@@ -526,11 +525,6 @@ function App() {
   }
   const subjectAction = teacher && (
     <Button view={selected ? "outlined" : "action"} onClick={() => showSettings(true)}>
-      {!selected && (
-        <Button.Icon>
-          <Icon data={Plus} />
-        </Button.Icon>
-      )}
       {selected ? "Настройки предмета" : "Создать предмет"}
     </Button>
   );
@@ -577,14 +571,14 @@ function App() {
                       : "Задания по всем предметам."}
               </p>
             </div>
-            {subjectAction}
+            {selected && subjectAction}
           </div>
           {!selected && (
             <section>
               {page === "Обзор" && (
                 <div className="sectionTitle">
                   <h2>
-                    Мои предметы <Label size="xs">{listedSubjects.length}</Label>
+                    Предметы <Label size="xs">{listedSubjects.length}</Label>
                   </h2>
                   <Button view="flat" onClick={() => go("Предметы")}>
                     Все предметы
@@ -600,8 +594,12 @@ function App() {
               <div className="sectionTitle">
                 <h2>Практические работы</h2>
                 <div className="assignmentControls">{!teacher && filters}
+                  {overview && <Button view="flat" onClick={() => go("Практические работы")}>
+                    Все практические работы
+                    <Icon data={ChevronRight} />
+                  </Button>}
                   {teacher && selected && <Button view="action" onClick={() => setCreatingWork(true)}>
-                    <Button.Icon><Icon data={Plus}/></Button.Icon>Создать практическую работу
+                    Создать практическую работу
                   </Button>}
                 </div>
               </div>

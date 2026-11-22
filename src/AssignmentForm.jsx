@@ -1,6 +1,5 @@
 import React, {useId, useState} from "react";
-import {Button, Checkbox, Disclosure, Icon, Select, TextInput} from "@gravity-ui/uikit";
-import {Plus} from "@gravity-ui/icons";
+import {Button, Checkbox, Disclosure, Select, TextInput} from "@gravity-ui/uikit";
 import {DateField, DatePicker} from "@gravity-ui/date-components";
 import {academicYearOf, currentSemester} from "./semester";
 import {dateTime} from "@gravity-ui/date-utils";
@@ -190,7 +189,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
           if (task) setItems([...items, {...task, taskId:id, id:crypto.randomUUID()}]);
         }}/>
       <div className="assignmentControls">{[["quiz","Добавить тест"],["program","Добавить задачу"]].map(([kind,label]) =>
-        <Button key={kind} size="l" onClick={() => setItems([...items,newActivity(kind)])}><Button.Icon><Icon data={Plus}/></Button.Icon>{label}</Button>)}</div>
+        <Button key={kind} size="l" onClick={() => setItems([...items,newActivity(kind)])}>{label}</Button>)}</div>
     </form>
   </WorkspacePage>;
 }
