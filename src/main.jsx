@@ -8,7 +8,6 @@ import {
   Text,
   Icon,
   Select,
-  ThemeProvider,
   Toaster,
   ToasterProvider,
   ToasterComponent,
@@ -32,6 +31,7 @@ import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
 import { TaskBank, collectTasks } from "./TaskBank";
 import { AssignmentDetails } from "./AssignmentDetails";
+import { AppearanceProvider, AppearanceSettings } from "./Appearance";
 import { WorkspacePage } from "./WorkspacePage";
 import { SubjectSettings, demoGroup, demoTeacher } from "./SubjectSettings";
 
@@ -360,6 +360,7 @@ function App() {
               {ico(ArrowLeft)} Все предметы
             </Button>
           )}
+          <AppearanceSettings/>
           <Select
             aria-label="Демонстрационная роль"
             value={[role]}
@@ -457,10 +458,10 @@ function App() {
         </article>);
 }
 createRoot(document.querySelector("#root")).render(
-  <ThemeProvider theme="light">
+  <AppearanceProvider>
     <ToasterProvider toaster={new Toaster()}>
       <App />
       <ToasterComponent />
     </ToasterProvider>
-  </ThemeProvider>,
+  </AppearanceProvider>,
 );

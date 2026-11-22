@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useThemeType } from "@gravity-ui/uikit";
 import { editor } from "monaco-editor/esm/vs/editor/editor.api";
 import "monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -6,6 +7,7 @@ import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
 export default function CodeEditor({ initialValue, onChange, filename = "main.cpp" }) {
+  const theme = useThemeType();
   const host = useRef(null);
   const initial = useRef(initialValue);
   const save = useRef(onChange);
@@ -16,7 +18,6 @@ export default function CodeEditor({ initialValue, onChange, filename = "main.cp
       value: initial.current,
       language: "cpp",
       ariaLabel: `Редактор C++, ${filename}`,
-      theme: "vs-dark",
       automaticLayout: true,
       minimap: { enabled: false },
       tabSize: 4,
@@ -29,6 +30,10 @@ export default function CodeEditor({ initialValue, onChange, filename = "main.cp
       instance.dispose();
     };
   }, [filename]);
+
+  useEffect(() => {
+    editor.setTheme(theme === "dark" ? "vs-dark" : "vs");
+  }, [theme, filename]);
 
   return <div className="code-editor" ref={host} />;
 }

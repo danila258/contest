@@ -3,12 +3,11 @@
 }
 .workspace {
   min-height: 100vh;
-  background: #f6f8fc;
+  background: var(--g-color-base-generic-ultralight);
 }
 .workspaceHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   /* Match the bottom divider of the default Gravity UI AsideHeader. */
   height: 58px;
@@ -16,7 +15,8 @@
   background: var(--g-color-base-background);
   border-bottom: 1px solid var(--g-color-line-generic);
 }
-.workspaceHeader > :last-child { margin-inline-start: auto; }
+.appearancePanel { display: grid; gap: 12px; padding: 16px; }
+.appearanceButton { margin-inline-start: auto; }
 .profile {
   padding: 8px;
 }
@@ -81,22 +81,18 @@ h2 {
   display: grid;
   place-items: center;
   height: 112px;
-  background-image:
-    linear-gradient(#ffffff50 1px, transparent 1px),
-    linear-gradient(90deg, #ffffff50 1px, transparent 1px);
-  background-size: 19px 19px;
 }
 .cover-blue {
-  background-color: #c0d0ff;
-  color: #304bd1;
+  --cover-fill: #c0d0ff; --cover-ink: #304bd1;
+  background-color: var(--cover-fill); color: var(--cover-ink);
 }
 .cover-green {
-  background-color: #b7efdc;
-  color: #1f8069;
+  --cover-fill: #b7efdc; --cover-ink: #1f8069;
+  background-color: var(--cover-fill); color: var(--cover-ink);
 }
 .cover-purple {
-  background-color: #dfd1fb;
-  color: #795cb3;
+  --cover-fill: #dfd1fb; --cover-ink: #795cb3;
+  background-color: var(--cover-fill); color: var(--cover-ink);
 }
 .subjectGroups { display: grid; gap: 4px; margin-top: 10px; }
 .groupLabels, .groupMeasure { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -162,8 +158,8 @@ h2 {
   min-height: 150px;
   margin-top: 6px;
   padding: 13px;
-  background: #182235;
-  color: #e5ebff;
+  background: var(--g-color-base-generic);
+  color: var(--g-color-text-primary);
   border: none;
   border-radius: 8px;
   font: 14px/1.6 monospace;
@@ -191,7 +187,7 @@ h2 {
   flex-wrap: wrap;
   gap: 10px 16px;
   padding: 12px;
-  border: 1px solid #dce2ec;
+  border: 1px solid var(--g-color-line-generic);
   border-radius: 8px;
   margin: 0;
   min-width: 0;
@@ -286,11 +282,16 @@ h2 {
 
 .cover-orange { background-color: var(--g-color-base-warning-medium); color: var(--g-color-text-warning-heavy); }
 .cover-gray { background-color: var(--g-color-base-misc-medium); color: var(--g-color-text-misc-heavy); }
-.cover-red { background-color: #ffc6c4; color: #a82c33; }
-.cover-yellow { background-color: #fae897; color: #745500; }
-.cover-teal { background-color: #a8e4e5; color: #106771; }
-.cover-pink { background-color: #f9cee2; color: #983265; }
-.cover-indigo { background-color: #c5c1ef; color: #493b97; }
+.cover-red { --cover-fill: #ffc6c4; --cover-ink: #a82c33;
+  background-color: var(--cover-fill); color: var(--cover-ink); }
+.cover-yellow { --cover-fill: #fae897; --cover-ink: #745500;
+  background-color: var(--cover-fill); color: var(--cover-ink); }
+.cover-teal { --cover-fill: #a8e4e5; --cover-ink: #106771;
+  background-color: var(--cover-fill); color: var(--cover-ink); }
+.cover-pink { --cover-fill: #f9cee2; --cover-ink: #983265;
+  background-color: var(--cover-fill); color: var(--cover-ink); }
+.cover-indigo { --cover-fill: #c5c1ef; --cover-ink: #493b97;
+  background-color: var(--cover-fill); color: var(--cover-ink); }
 .coverSwatch { display:block; width:20px; height:20px; border-radius:50%; border:1px solid currentColor; }
 .subjectForm .coverPicker { display:grid; grid-template-columns:minmax(150px, 1fr) minmax(0, 2fr); align-items:center; }
 .coverControls { display:grid; grid-template-columns:minmax(0, 1fr); gap:8px; }
@@ -328,3 +329,8 @@ h2 {
 .bankPage .g-table { max-width: 100%; }
 .bankPrompt { max-width: 44ch; white-space: normal; overflow-wrap: anywhere; }
 .bankPrompt summary { cursor: pointer; color: var(--g-color-text-secondary); }
+
+.g-root_theme_dark :is(.cover, .coverSwatch):is(.cover-blue, .cover-green, .cover-purple, .cover-red, .cover-yellow, .cover-teal, .cover-pink, .cover-indigo) {
+  background-color: color-mix(in srgb, var(--cover-ink) 36%, var(--g-color-base-background));
+  color: var(--cover-fill);
+}
