@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AsideHeader, MobileHeader } from "@gravity-ui/navigation";
-import { Avatar, User } from "@gravity-ui/uikit";
+import { User } from "@gravity-ui/uikit";
 import { Code, Database, GraduationCap, House, ListCheck } from "@gravity-ui/icons";
 
 const narrowScreen = window.matchMedia("(max-width: 880px)");
@@ -55,8 +55,8 @@ export function WorkspaceNavigation({ page, go, teacher, children }) {
       expandTitle="Развернуть меню"
       collapseTitle="Свернуть меню"
       renderFooter={() => (
-        <div className="profile">
-          {compact ? <Avatar {...avatar} title={name} /> : user}
+        <div className={compact ? "profile profileCompact" : "profile"}>
+          {user}
         </div>
       )}
       renderContent={() => children}

@@ -6,6 +6,7 @@ import {Button, Select, Table, TextInput} from "@gravity-ui/uikit";
 import {ActivityFields, Input, newActivity} from "./AssignmentActivities";
 import {contentError} from "./AssignmentForm";
 import MarkdownContent from "./MarkdownContent";
+import TeacherActivityPreview from "./TeacherActivityPreview";
 import {WorkspacePage} from "./WorkspacePage";
 
 const MarkdownField = lazy(() => import("./MarkdownField"));
@@ -65,6 +66,7 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
   const [subject,setSubject] = useState("");
   const [query,setQuery] = useState("");
   const [section,setSection] = useState("tasks");
+  const [preview,setPreview] = useState(null);
   const [editor,setEditor] = useState(null);
   const accessible = new Map(subjects.map(s => [s.id,s.title]));
   const taskNames = new Map(tasks.map(t => [t.id,t.title]));
@@ -72,6 +74,9 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
   const rows = (isTasks ? tasks : bank.questions).filter(row => accessible.has(row.subject) &&
     (!subject || row.subject === subject) && (row.title + " " + promptOf(row)).toLowerCase().includes(query.toLowerCase()));
   function edit(item) { setEditor(item); }
+  if (preview) return <WorkspacePage title={preview.title} returnAction={{label:"К банку",onClick:() => setPreview(null)}}>
+    <TeacherActivityPreview item={preview}/>
+  </WorkspacePage>;
   if (editor) return <BankEditor initial={editor} subjects={subjects} tasks={tasks} onClose={() => setEditor(null)}
     onSave={({existing, ...record}) => {
       save(current => ({...current, [section]:[...current[section].filter(row => row.id !== record.id),record]}));
@@ -99,7 +104,8 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
     }}/>
     <Table width="max" wordWrap data={rows} emptyMessage="Материалов по этому запросу нет." columns={[
       {id:"title",name:isTasks ? "Задача" : "Название",template:row => <Button view="flat" onClick={() => edit({...row,existing:true})}>{row.title}</Button>},
-      {id:"prompt",name:"Условие",template:row => <PromptPreview source={promptOf(row)}/>},
+      {id:"prompt",name:"Условие",template:row => row.kind === "theory" || !row.kind ? <PromptPreview source={row.prompt}/> :
+        <Button view="flat" onClick={() => setPreview(row)}>{isTasks ? "Обзор задачи" : "Обзор теста"}</Button>},
       {id:"subject",name:"Предмет",template:row => accessible.get(row.subject)},
       ...(!isTasks ? [{id:"scope",name:"Связанные задачи",template:row => row.taskIds.length ? row.taskIds.map(id => taskNames.get(id)).join(", ") : "Весь предмет"}] : [])
     ]}/>

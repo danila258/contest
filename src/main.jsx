@@ -49,6 +49,7 @@ import { SubjectSettings } from "./SubjectSettings";
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import MarkdownContent from "./MarkdownContent";
+import TeacherActivityPreview from "./TeacherActivityPreview";
 
 const subjects = [...demoSubjects,...imported.subjects];
 
@@ -320,7 +321,11 @@ function App() {
           <small>
             {subject(active.subject).title} · Сдать до {workDate(active)}
           </small>
-          <MarkdownContent source={active.question || active.task} />
+          {teacher ? <TeacherActivityPreview item={active.question ? {
+            kind:"quiz", questions:[{id:active.id, prompt:active.question, answers:active.answers.map((text,i) =>
+              ({id:i,text,correct:text === active.correct}))}],
+          } : {kind:"program",prompt:active.task,sources:{"main.cpp":starter}}}/> :
+            <MarkdownContent source={active.question || active.task}/>}
           {teacher ? (
             <>
               <h3>Попытки Анны Смирновой</h3>

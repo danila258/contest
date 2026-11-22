@@ -1,5 +1,5 @@
 import React, {useId, useState} from "react";
-import {Button, Checkbox, Icon, Select, TextInput} from "@gravity-ui/uikit";
+import {Button, Checkbox, Disclosure, Icon, Select, TextInput} from "@gravity-ui/uikit";
 import {Plus} from "@gravity-ui/icons";
 import {DateField, DatePicker} from "@gravity-ui/date-components";
 import {academicYearOf, currentSemester} from "./semester";
@@ -8,6 +8,7 @@ import {FormRow} from "@gravity-ui/components";
 import {readActivityDrafts} from "./importData";
 import {JsonImport} from "./JsonImport";
 import {WorkspacePage} from "./WorkspacePage";
+import TeacherActivityPreview from "./TeacherActivityPreview";
 import {ActivityFields, newActivity} from "./AssignmentActivities";
 
 function scheduleRange(subject) {
@@ -177,7 +178,9 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
             setItems(previous => previous.map(entry => entry.id === item.id ? replacement : entry));
             return 1;
           }}/>}
-        {item.taskId ? <strong>{item.title}</strong> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
+        {item.taskId ? <><strong>{item.title}</strong><Disclosure summary="Обзор задачи" keepMounted={false}>
+          <TeacherActivityPreview item={item}/>
+        </Disclosure></> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
       <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}
         options={availableTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}

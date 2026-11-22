@@ -3,6 +3,7 @@ import {Button, Card, Icon, Menu, Select, Text, TextInput} from "@gravity-ui/uik
 import {ChevronLeft, ChevronRight} from "@gravity-ui/icons";
 import {WorkspacePage} from "./WorkspacePage";
 import MarkdownContent from "./MarkdownContent";
+import TeacherActivityPreview from "./TeacherActivityPreview";
 
 const date = value => new Date(value).toLocaleString("ru-RU", {dateStyle:"long", timeStyle:"short"});
 
@@ -56,17 +57,18 @@ export function AssignmentDetails({work, subject, teacher, editBlocked, editErro
           value={[String(selectedIndex)]} onUpdate={([value]) => setSelectedIndex(Number(value))} options={options}/>
       </nav>}
       {work.activities.map((item,index) => (teacher || index === selectedIndex) && <Card key={item.id}>
-        <Text color="secondary">{item.kind === "quiz" ? "Тест" : "Задача на программирование"}</Text>
-        <h2>{index + 1}. {item.title}</h2>
-        {item.kind === "quiz" ? <>
+        <header className={teacher ? "teacherActivityHeading" : undefined}>
+          <Text color="secondary">{teacher && `${index + 1}. `}{item.kind === "quiz" ? "Тест" : "Задача на программирование"}</Text>
+          <h2>{teacher ? item.title : `${index + 1}. ${item.title}`}</h2>
+        </header>
+        {teacher ? <TeacherActivityPreview item={item}/> : item.kind === "quiz" ? <>
             <p>Попыток — {item.attempts}. Для зачёта — {item.threshold} из {item.questions.length}.</p>
             {item.questions.map((q,i) => <section key={q.id}><h3>Вопрос {i+1}</h3>
               <MarkdownContent source={q.prompt}/>
-              <ul>{q.answers.map(a => <li key={a.id}>{a.text}{teacher && a.correct && " ✓"}</li>)}</ul>
+              <ul>{q.answers.map(a => <li key={a.id}>{a.text}</li>)}</ul>
             </section>)}
           </> : <><MarkdownContent source={item.prompt}/>
             {item.minutes && <p>Время на решение — {item.minutes} мин.</p>}
-            {teacher && <p>Проверка — {item.mode === "stdout" ? "STDOUT" : "unit-тесты"}. Проверочных тестов — {item.cases.length}.</p>}
           </>}
       </Card>)}
       </section>
