@@ -5,7 +5,7 @@ import {readBank, readSubjects, readWorks} from "../src/importData.js";
 import {currentSemester} from "../src/semester.js";
 import {demoTeacher} from "../src/subjectOptions.js";
 import {subjects, works as demos} from "../src/data.js";
-import {collectTasks} from "../src/activityData.js";
+import {collectTasks, newActivity} from "../src/activityData.js";
 
 function template(name) {
   return JSON.parse(readFileSync(new URL(`../public/${name}-template.json`, import.meta.url), "utf8"));
@@ -143,3 +143,25 @@ for (const {path, importRow} of recordsWithoutId) {
     }
   });
 }
+
+test("new and imported quizzes shuffle answers and disable backtracking by default", () => {
+  const created = newActivity("quiz");
+  assert.equal(created.shuffle, true);
+  assert.equal(created.back, false);
+
+  const [work] = template("works").works;
+  const quiz = work.activities[0];
+  quiz.timer = "whole";
+  delete quiz.shuffle;
+  delete quiz.back;
+  const imported = () => readWork(work).works[0].activities[0];
+  const defaults = imported();
+  assert.equal(defaults.shuffle, true);
+  assert.equal(defaults.back, false);
+
+  quiz.shuffle = false;
+  quiz.back = true;
+  const configured = imported();
+  assert.equal(configured.shuffle, false);
+  assert.equal(configured.back, true);
+});

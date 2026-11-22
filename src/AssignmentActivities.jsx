@@ -39,7 +39,7 @@ function Quiz({item, update}) {
       <Input label="Правильных ответов для зачёта" type="number" min="1" max={item.questions.length} value={item.threshold} onUpdate={threshold => update({threshold})}/>
     </div>
     <Toggle label="Перемешивать варианты ответа" checked={item.shuffle} onUpdate={shuffle => update({shuffle})}/>
-    <Toggle label="Разрешить возврат к вопросам" checked={item.back} onUpdate={back => update({back, timer: back ? "whole" : item.timer})}/>
+    <Toggle label="Разрешить возвращаться к предыдущим вопросам" checked={item.back} onUpdate={back => update({back, timer: back ? "whole" : item.timer})}/>
     {!item.back && <Choice label="Таймер" value={item.timer} options={[[ "whole","На весь тест"],["question","На каждый вопрос"]]} onUpdate={timer => update({timer})}/>}
     {item.timer === "whole" && <Input label="Время на тест, мин" type="number" min="1" value={item.minutes} onUpdate={minutes => update({minutes})}/>}
     {item.questions.map((q, i) => <fieldset className="assignmentBlock" key={q.id}><legend>Вопрос {i + 1}</legend>

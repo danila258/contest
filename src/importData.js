@@ -107,7 +107,7 @@ const answer = object({text:nonblank, correct:flag}).transform(a => ({...a,id:ne
 const question = object({prompt:nonblank, minutes:minutes.default("5"), answers:z.array(answer).min(1)
   .refine(answers => answers.some(a => a.correct),"Отметьте хотя бы один правильный ответ.")}).transform(q => ({...q,id:newId()}));
 const quiz = object({kind:z.literal("quiz"), title, attempts:minutes.default("1"), threshold:minutes.default("1"),
-  shuffle:flag, back:z.boolean().default(true), timer:z.enum(["whole","question"]).default("whole"),
+  shuffle:z.boolean().default(true), back:flag, timer:z.enum(["whole","question"]).default("whole"),
   minutes:minutes.default("30"), questions:z.array(question).min(1)});
 const localDate = text.regex(/^\d{4}-\d\d-\d\dT\d\d:\d\d$/, "Ожидается локальная дата ГГГГ-ММ-ДДTЧЧ:ММ.")
   .refine(value => {
