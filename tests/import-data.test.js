@@ -3,7 +3,7 @@ import {readFileSync} from "node:fs";
 import test from "node:test";
 import {readBank, readSubjects, readWorks, readWorkDraft, readActivityDrafts} from "../src/importData.js";
 import {currentSemester} from "../src/semester.js";
-import {demoTeacher} from "../src/subjectOptions.js";
+import {demoTeacher, demoStudent, studentHasAccess} from "../src/subjectOptions.js";
 import {subjects, works as demos} from "../src/data.js";
 import {collectTasks, newActivity} from "../src/activityData.js";
 
@@ -232,4 +232,16 @@ test("new work and program defaults respect explicit overrides", () => {
   assert.equal(override.review,false);
   assert.deepEqual(override.activities[0].checks,{...checks,format:"off"});
   assert.equal(override.activities[0].logs,true);
+});
+
+test("subject access accepts group or individual grants and validates student IDs", () => {
+  const row = {...template("subjects").subjects[0], academicYear:currentSemester().academicYear, groups:[]};
+  const imported = studentIds => readSubjects({subjects:[{...row,studentIds}]},[])[0];
+  const direct = imported([demoStudent.id,demoStudent.id]);
+  assert.deepEqual(direct.studentIds,[demoStudent.id]);
+  assert.equal(studentHasAccess(direct,demoStudent),true);
+  assert.equal(studentHasAccess(imported(["student-ivan"]),demoStudent),false);
+  assert.equal(studentHasAccess({...row,groups:[demoStudent.group]},demoStudent),true);
+  assert.equal(studentHasAccess({},demoStudent),true);
+  assert.throws(() => imported(["unknown"]),/studentIds/);
 });

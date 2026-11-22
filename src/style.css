@@ -315,6 +315,7 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
+.subjectAccess > .teacherAccess { grid-column: 1 / -1; }
 .subjectForm { gap: 24px; }
 .subjectForm legend { font-weight: 500; }
 @media (max-width: 620px) {

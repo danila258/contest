@@ -4,7 +4,7 @@ import {academicYearOf, academicYearOptions, currentSemester, validAcademicYear}
 import {defaultChecks, programModes, savedActivity} from "./activityData.js";
 import {bankIdOf} from "./subjectCopy.js";
 import {starter} from "./data.js";
-import {colors, iconNames, demoGroup, demoTeacher, groups, teachers} from "./subjectOptions.js";
+import {colors, iconNames, demoGroup, demoTeacher, groups, students, teachers} from "./subjectOptions.js";
 
 const object = z.strictObject;
 const text = z.string();
@@ -38,6 +38,7 @@ function resolveSubject(row, fallback, subjects, path) {
 const subjectSchema = object({
   id:key, title, semesterNumber:positive.pipe(z.number().max(12)), academicYear:title.refine(validAcademicYear),
   color:z.enum(Object.keys(colors)).default("blue"), icon:z.enum(iconNames).default("code"),
+  studentIds:z.array(z.enum(students.map(student => student.id))).default([]),
   groups:z.array(z.enum(groups)).default([demoGroup]), teachers:z.array(z.enum(teachers)).default([]),
   description:text.default(""), faq:text.default(""), review:text.default(""),
 });
@@ -49,7 +50,7 @@ export function readSubjects(data, existing) {
   return subjects.map((s,i) => {
     uniqueId(ids,s.id,`subjects.${i}.id`);
     if (!years.includes(s.academicYear)) throw Error(`subjects.${i}.academicYear — доступные годы: ${years.join(", ")}.`);
-    return {...s, teacher:demoTeacher, teachers:[...new Set([demoTeacher,...s.teachers])], groups:[...new Set(s.groups)]};
+    return {...s, teacher:demoTeacher, studentIds:[...new Set(s.studentIds)], teachers:[...new Set([demoTeacher,...s.teachers])], groups:[...new Set(s.groups)]};
   });
 }
 

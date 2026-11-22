@@ -9,7 +9,7 @@ import { WorkspacePage } from "./WorkspacePage";
 
 const MarkdownField = React.lazy(() => import("./MarkdownField"));
 
-import {demoGroup, demoTeacher, groups, teachers} from "./subjectOptions";
+import {demoGroup, demoTeacher, groups, students, teachers} from "./subjectOptions";
 
 export function SubjectSettings({ subject, copying = false, onSave, onClose }) {
   const current = currentSemester();
@@ -24,6 +24,7 @@ export function SubjectSettings({ subject, copying = false, onSave, onClose }) {
     academicYear: copying ? copyYear : sourceYear,
     title: subject?.title ?? "",
     groups: subject?.groups ?? [demoGroup],
+    studentIds: subject?.studentIds ?? [],
     teachers: [...new Set([owner, ...(subject?.teachers ?? [demoTeacher])])],
     description: subject?.description ?? "",
     faq: subject?.faq ?? "",
@@ -123,6 +124,19 @@ export function SubjectSettings({ subject, copying = false, onSave, onClose }) {
             />
           </fieldset>
           <fieldset>
+            <legend>Студенты с доступом</legend>
+            <Select aria-label="Студенты с доступом" size="l" width="max" multiple filterable hasCounter
+              placeholder="Выберите студентов" filterPlaceholder="Введите ФИО"
+              renderEmptyOptions={() => <span>Студенты не найдены</span>}
+              options={students.map(student => ({value:student.id, content:student.name + " · " + student.group}))}
+              filterOption={(option, query) => {
+                const normalize = text => text.toLowerCase().replaceAll("ё","е");
+                const name = normalize(option.content);
+                return normalize(query).trim().split(/\s+/).every(word => name.includes(word));
+              }}
+              value={form.studentIds} onUpdate={values => update("studentIds",values)}/>
+          </fieldset>
+          <fieldset className="teacherAccess">
             <legend>Преподаватели с доступом</legend>
             <Select
               aria-label="Преподаватели с доступом"

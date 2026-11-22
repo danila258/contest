@@ -66,7 +66,7 @@ export function SubjectGroups({ groups }) {
           </span>
         </div>
       ) : (
-        <Text variant="caption-2">Доступ не выдан</Text>
+        <Text variant="caption-2">Группы не выбраны</Text>
       )}
     </div>
   );

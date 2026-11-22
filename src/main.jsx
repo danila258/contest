@@ -41,7 +41,7 @@ import {WorkStart} from "./WorkStart";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
 import { WorkspacePage } from "./WorkspacePage";
-import {demoGroup, demoTeacher} from "./subjectOptions";
+import {demoGroup, demoStudent, demoTeacher, studentHasAccess} from "./subjectOptions";
 import {bankIdOf, copySubjectLibrary, referenceWorkTasks, resolveWorkTasks} from "./subjectCopy";
 import { SubjectSettings } from "./SubjectSettings";
 
@@ -180,7 +180,7 @@ function App() {
         ? s.teacher === demoTeacher ||
           !s.teachers ||
           s.teachers.includes(demoTeacher)
-        : !s.groups || s.groups.includes(demoGroup),
+        : studentHasAccess(s,demoStudent),
   );
   const current = currentSemester();
   const listedSubjects = page === "Обзор"
