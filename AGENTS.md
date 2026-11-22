@@ -7,7 +7,7 @@ For UI changes, read the [frontend development guide](docs/development.md). It r
 ## Domain vocabulary
 
 - A subject (предмет) contains practical assignments (практические работы). Each assignment contains an ordered mix of quizzes (тесты) and C++ programming tasks (задачи по программированию). Distinguish a quiz from the automated checks for a program.
-- Keep the deadline to **start** an attempt distinct from its server-controlled solving timer. A student who starts just before the deadline has the full configured solving time.
+- The assignment submission deadline applies to every attempt, including one already in progress. Use the earlier of the submission deadline and any configured solving timer.
 - Keep the autosaved draft, the student's own run, and the immutable submission distinct. A student's own run has no effect on credit. Grade each activity using the latest completed attempt.
 - In a sequential assignment, automated success unlocks the next activity. Teacher confirmation applies to the assignment as a whole. An extra attempt applies to one student's specific activity.
 

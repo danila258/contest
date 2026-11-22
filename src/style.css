@@ -313,6 +313,8 @@ h2 {
 .subjectForm .assignmentBlock { display: grid; gap: 16px; }
 .assignmentBlock > .g-button { justify-self: start; }
 .assignmentPair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.subjectForm .scheduleField { display: grid; grid-template-columns: minmax(0, 1fr) 5.5rem; }
+.scheduleField .gc-form-row { margin: 0; }
 .assignmentControls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .assignmentBlock .gc-form-row { margin: 0; }
 .workspacePageActions:has([role="alert"]) { flex-wrap: wrap; }

@@ -23,7 +23,7 @@ export function AppearanceProvider({children}) {
       // The selected theme still applies for this session.
     }
   }
-  return <ThemeProvider theme={theme}>
+  return <ThemeProvider theme={theme} lang="ru">
     <ChangeTheme.Provider value={changeTheme}>{children}</ChangeTheme.Provider>
   </ThemeProvider>;
 }

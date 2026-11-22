@@ -9,7 +9,7 @@ export function AssignmentDetails({work, subject, teacher, onBack}) {
   return <WorkspacePage title={work.title} onBack={onBack}>
     <div className="subjectInfo">
       <Text color="secondary">{subject.title}</Text>
-      <div>Открытие доступа — {date(work.opensAt)}<br/>Начать попытку до {date(work.dueAt)}</div>
+      <div>Открытие доступа — {date(work.opensAt)}<br/>Сдать до {date(work.dueAt)}</div>
       {work.sequential && <div>Задания открываются по порядку после успешной проверки.</div>}
       {work.review && <div>Для зачёта требуется подтверждение преподавателя.</div>}
       {!work.activities.length && <p>В этой работе пока нет заданий.</p>}

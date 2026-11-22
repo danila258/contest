@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { settings as dateSettings } from "@gravity-ui/date-utils";
 import { createRoot } from "react-dom/client";
 import {
   Button,
@@ -43,8 +44,8 @@ import MarkdownContent from "./MarkdownContent";
 
 const CodeEditor = React.lazy(() => import("./CodeEditor"));
 
-const dateLabel = (day) =>
-  deadline(day).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+const deadlineOf = work => Date.parse(work.dueAt);
+const workDate = work => new Date(work.dueAt).toLocaleString("ru-RU", {dateStyle:"short", timeStyle:"short"});
 const ico = (data, size = 18) => <Icon data={data} size={size} />;
 const opts = (labels) => labels.map((value) => ({ value, content: value }));
 function useLocal(key, initial) {
@@ -98,7 +99,12 @@ function App() {
   const [workSubject,setWorkSubject] = useState("");
   const [workQuery,setWorkQuery] = useState("");
   const catalogue = page === "Практические работы";
-  const works = [...demoWorks, ...savedWorks];
+  const [datedDemoWorks] = useState(() => demoWorks.map(work => {
+    const due = deadline(work.day);
+    due.setHours(23, 59, 0, 0);
+    return {...work, dueAt:due.toISOString()};
+  }));
+  const works = [...datedDemoWorks, ...savedWorks];
   const [now, setNow] = useState(Date.now);
   React.useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000 * 30);
@@ -120,13 +126,12 @@ function App() {
     ? all.filter(s => inCurrentSemester(s, current))
     : all;
   const subject = (id) => listedSubjects.find((s) => s.id === id);
-  const deadlineOf = (w) => w.dueAt ? Date.parse(w.dueAt) : deadline(w.day).setHours(23,59,59,999);
-  const workDate = (w) => w.dueAt ? new Date(w.dueAt).toLocaleString("ru-RU", {dateStyle:"short", timeStyle:"short"}) : dateLabel(w.day) + " · До 23:59";
   function state(work) {
     const availability = deadlineOf(work) <= now ? "Срок истёк" : "Доступна";
 
     const result = attempts[work.id]?.at(-1)?.status;
     if (result) return result;
+    if (availability === "Срок истёк" && work.state !== "Зачтено") return availability;
     if (Object.hasOwn(drafts, work.id)) return "В работе";
     return work.state === "Доступна" ? availability : work.state ?? availability;
   }
@@ -151,6 +156,11 @@ function App() {
     filterSet("Все статусы");
   }
   function submit() {
+    const submittedAt = Date.now();
+    if (submittedAt >= deadlineOf(active)) {
+      setNow(submittedAt);
+      return;
+    }
     const answer = drafts[active.id] ?? (active.question ? "" : starter);
     const status = active.question
       ? answer === active.correct
@@ -161,7 +171,7 @@ function App() {
       ...attempts,
       [active.id]: [
         ...(attempts[active.id] || []),
-        { answer, status, time: new Date().toISOString() },
+        { answer, status, time: new Date(submittedAt).toISOString() },
       ],
     });
   }
@@ -210,7 +220,7 @@ function App() {
       <WorkspacePage title={active.title} onBack={() => open(null)}>
         <div className="activity">
           <small>
-            {subject(active.subject).title} · До {dateLabel(active.day)}, 23:59
+            {subject(active.subject).title} · Сдать до {workDate(active)}
           </small>
           <MarkdownContent source={active.question || active.task} />
           {teacher ? (
@@ -261,7 +271,7 @@ function App() {
               {attempts[active.id]?.length > 0 && (
                 <p role="status">Последняя попытка: {state(active)}</p>
               )}
-              {active.day >= 0 && (
+              {now >= deadlineOf(active) ? <p role="status">Срок сдачи истёк.</p> : (
                 <Button
                   view="action"
                   disabled={active.question && !drafts[active.id]}
@@ -313,7 +323,7 @@ function App() {
         data={displayWorks}
         getRowDescriptor={(w) => ({ id: w.id })}
         onRowClick={open}
-        emptyMessage={catalogue && (workQuery.trim() || workSubject || filter !== "Все статусы") ? "По выбранным условиям работ нет." : overview && filter === "Все статусы" ? "Сейчас нет работ с открытым сроком начала попыток." : "Работ пока нет."}
+        emptyMessage={catalogue && (workQuery.trim() || workSubject || filter !== "Все статусы") ? "По выбранным условиям работ нет." : overview && filter === "Все статусы" ? "Сейчас нет работ, доступных для сдачи." : "Работ пока нет."}
         columns={[
           {
             id: "title",
@@ -483,11 +493,17 @@ function App() {
           )}
         </article>);
 }
-createRoot(document.querySelector("#root")).render(
-  <AppearanceProvider>
-    <ToasterProvider toaster={new Toaster()}>
-      <App />
-      <ToasterComponent />
-    </ToasterProvider>
-  </AppearanceProvider>,
-);
+async function renderApp() {
+  await dateSettings.loadLocale("ru");
+  dateSettings.setLocale("ru");
+  createRoot(document.querySelector("#root")).render(
+    <AppearanceProvider>
+      <ToasterProvider toaster={new Toaster()}>
+        <App />
+        <ToasterComponent />
+      </ToasterProvider>
+    </AppearanceProvider>,
+  );
+}
+
+renderApp();

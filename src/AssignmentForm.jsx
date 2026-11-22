@@ -1,12 +1,42 @@
-import React, {useState} from "react";
+import React, {useId, useState} from "react";
 import {Button, Checkbox, Icon, Select, TextInput} from "@gravity-ui/uikit";
 import {Plus} from "@gravity-ui/icons";
+import {DateField, DatePicker} from "@gravity-ui/date-components";
+import {academicYearOf, currentSemester} from "./semester";
+import {dateTime} from "@gravity-ui/date-utils";
 import {FormRow} from "@gravity-ui/components";
 import {WorkspacePage} from "./WorkspacePage";
-import {ActivityFields, Input, newActivity} from "./AssignmentActivities";
+import {ActivityFields, newActivity} from "./AssignmentActivities";
 
-function localMinute(date) {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+function scheduleRange(subject) {
+  const year = academicYearOf(subject) ?? currentSemester().academicYear;
+  const [start, end] = year.split("/");
+  return {start:start + "-09-01", end:end + "-08-31"};
+}
+
+function openingDate(range) {
+  const today = dateTime().format("YYYY-MM-DD");
+  return today >= range.start && today <= range.end ? today : range.start;
+}
+
+function ScheduleField({timeId, label, value, onUpdate, range, placeholderDate}) {
+  const id = useId();
+  return <fieldset className="scheduleField">
+    <legend>{label}</legend>
+    <FormRow direction="column" label="Дата" fieldId={id} required>
+      <DatePicker id={id} aria-label="Дата" format="DD.MM.YYYY" size="l"
+        minValue={dateTime({input:range.start})} maxValue={dateTime({input:range.end}).endOf("day")}
+        placeholderValue={dateTime({input:placeholderDate})}
+        value={value.date ? dateTime({input:value.date}) : null}
+        onUpdate={date => onUpdate({...value, date:date?.format("YYYY-MM-DD") ?? ""})}/>
+    </FormRow>
+    <FormRow direction="column" label="Время" fieldId={timeId} required>
+      <DateField id={timeId} aria-label="Время" size="l" format="HH:mm"
+        value={value.time ? dateTime({input:`2000-01-01T${value.time}:00Z`, timeZone:"UTC"}) : null}
+        timeZone="UTC"
+        onUpdate={time => onUpdate({...value, time:time?.format("HH:mm") ?? ""})}/>
+    </FormRow>
+  </fieldset>;
 }
 
 export function contentError(items) {
@@ -29,17 +59,29 @@ export function contentError(items) {
 
 export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, onClose, onSave}) {
   const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
+  const range = scheduleRange(subjects.find(s => s.id === subjectId));
   const availableTasks = bankTasks.filter(task => task.subject === subjectId);
   const [title,setTitle] = useState("");
-  const [opens,setOpens] = useState(() => localMinute(new Date()));
-  const [due,setDue] = useState("");
+  const [opens,setOpens] = useState(() => ({date:openingDate(range), time:"00:01"}));
+  const [due,setDue] = useState({date:"", time:"23:59"});
   const [sequential,setSequential] = useState(false);
   const [review,setReview] = useState(false);
   const [items,setItems] = useState([]);
   const [saveError,setSaveError] = useState("");
   const [submitted,setSubmitted] = useState(false);
-  const error = !title.trim() ? "Введите название работы." : !opens || !due || new Date(due) <= new Date(opens)
-    ? "Дедлайн должен быть позже открытия доступа." : contentError(items);
+  const opensAt = new Date(`${opens.date}T${opens.time}`);
+  const dueAt = new Date(`${due.date}T${due.time}`);
+  function changeSubject(id) {
+    const nextRange = scheduleRange(subjects.find(s => s.id === id));
+    const inRange = date => date >= nextRange.start && date <= nextRange.end;
+    if (!inRange(opens.date)) setOpens({...opens, date:openingDate(nextRange)});
+    if (!inRange(due.date)) setDue({...due, date:""});
+    setSubjectId(id);
+  }
+  const invalidDate = [opens.date, due.date].some(date => !date || date < range.start || date > range.end);
+  const error = !title.trim() ? "Введите название работы." : invalidDate
+    ? "Выберите обе даты в пределах учебного года предмета." : !(dueAt > opensAt)
+    ? "Срок сдачи должен быть позже открытия доступа." : contentError(items);
   function move(index, offset) {
     const next = [...items];
     [next[index],next[index+offset]] = [next[index+offset],next[index]];
@@ -49,33 +91,44 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
     e.preventDefault();
     setSubmitted(true);
     setSaveError("");
+    // DateField retains its last complete value while one segment is empty.
+    for (const id of ["opens-time", "due-time"]) {
+      const input = e.currentTarget.elements.namedItem(id);
+      const text = input.value.replace(/\p{Cf}/gu, "");
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(text)) {
+        setSaveError("Заполните часы и минуты.");
+        input.focus();
+        return;
+      }
+    }
     if (error) return;
     try {
-      onSave({id:crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:new Date(opens).toISOString(),
-      dueAt:new Date(due).toISOString(), sequential, review, activities:items});
+      onSave({id:crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
+      dueAt:dueAt.toISOString(), sequential, review, activities:items});
     } catch (failure) {
       if (!(failure instanceof DOMException)) throw failure;
       setSaveError("Браузер не смог сохранить работу. Проверьте свободное место и разрешение на хранение данных.");
     }
   }
   return <WorkspacePage title="Новая практическая работа" actions={<>
-    {submitted && (error || saveError) && <span role="alert">{error || saveError}</span>}
+    {submitted && (saveError || error) && <span role="alert">{saveError || error}</span>}
     <Button size="xl" onClick={onClose}>Отмена</Button>
     <Button size="xl" view="action" type="submit" extraProps={{form:"assignment-form"}}>Создать</Button>
   </>}>
     <form id="assignment-form" className="subjectForm" onSubmit={submit}>
       {subject ? <span>{subject.title}</span> : <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
-          options={subjects.map(s => ({value:s.id, content:s.title}))} onUpdate={([id]) => setSubjectId(id)}/>
+          options={subjects.map(s => ({value:s.id, content:s.title}))} onUpdate={([id]) => changeSubject(id)}/>
         {items.some(item => item.taskId) && <span>Чтобы сменить предмет, отсоедините задачи из его банка.</span>}
       </fieldset>}
       <FormRow className="subjectTitleRow" direction="column" label="Название работы" fieldId="assignment-title" required>
         <TextInput id="assignment-title" size="l" autoFocus controlProps={{required:true}} value={title} onUpdate={setTitle} placeholder="Например, поиск в отсортированном массиве"/>
       </FormRow>
-      <fieldset className="semesterFields assignmentPair"><legend>Сроки</legend>
-        <Input label="Открытие доступа" type="datetime-local" value={opens} onUpdate={setOpens}/>
-        <Input label="Дедлайн начала попыток" type="datetime-local" value={due} onUpdate={setDue}/>
-      </fieldset>
+      <div>Учебный год {range.start.slice(0, 4)}/{range.end.slice(0, 4)}</div>
+      <div className="assignmentPair">
+        <ScheduleField timeId="opens-time" key={range.start + "-open"} range={range} placeholderDate={openingDate(range)} label="Открытие доступа" value={opens} onUpdate={setOpens}/>
+        <ScheduleField timeId="due-time" key={range.start + "-due"} range={range} placeholderDate={opens.date || openingDate(range)} label="Сдать до" value={due} onUpdate={setDue}/>
+      </div>
       <fieldset className="assignmentBlock"><legend>Прохождение</legend>
         <Checkbox checked={sequential} onUpdate={setSequential}>Открывать следующее задание после успешной проверки предыдущего</Checkbox>
         <Checkbox checked={review} onUpdate={setReview}>Для зачёта требуется подтверждение преподавателя</Checkbox>
