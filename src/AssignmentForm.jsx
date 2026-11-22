@@ -59,27 +59,28 @@ export function contentError(items) {
   return "";
 }
 
-export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, onImport, onClose, onSave}) {
+function localSchedule(instant) {
+  const local = dateTime({input:instant});
+  return {date:local.format("YYYY-MM-DD"), time:local.format("HH:mm")};
+}
+
+export function AssignmentForm({initialWork, subject, subjects, initialSubjectId, bankTasks, onImport, onClose, onSave}) {
   const [importedId,setImportedId] = useState(null);
   const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
   const range = scheduleRange(subjects.find(s => s.id === subjectId));
   const availableTasks = bankTasks.filter(task => task.subject === subjectId);
-  const [title,setTitle] = useState("");
-  const [opens,setOpens] = useState(() => ({date:openingDate(range), time:"00:01"}));
-  const [due,setDue] = useState({date:"", time:"23:59"});
-  const [sequential,setSequential] = useState(false);
-  const [review,setReview] = useState(false);
-  const [items,setItems] = useState([]);
+  const [title,setTitle] = useState(initialWork?.title ?? "");
+  const [opens,setOpens] = useState(() => initialWork ? localSchedule(initialWork.opensAt) : {date:openingDate(range), time:"00:01"});
+  const [due,setDue] = useState(() => initialWork ? localSchedule(initialWork.dueAt) : {date:"", time:"23:59"});
+  const [sequential,setSequential] = useState(initialWork?.sequential ?? false);
+  const [review,setReview] = useState(initialWork?.review ?? false);
+  const [items,setItems] = useState(initialWork?.activities ?? []);
   const [saveError,setSaveError] = useState("");
   const [submitted,setSubmitted] = useState(false);
   const opensAt = new Date(`${opens.date}T${opens.time}`);
   const dueAt = new Date(`${due.date}T${due.time}`);
   function importDraft(data) {
     const draft = onImport(data, subjectId);
-    function localSchedule(instant) {
-      const local = dateTime({input:instant});
-      return {date:local.format("YYYY-MM-DD"), time:local.format("HH:mm")};
-    }
     setImportedId(draft.id);
     setSubjectId(draft.subject);
     setTitle(draft.title);
@@ -123,20 +124,20 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
     }
     if (error) return;
     try {
-      onSave({id:importedId ?? crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
+      onSave({id:initialWork?.id ?? importedId ?? crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
       dueAt:dueAt.toISOString(), sequential, review, activities:items});
     } catch (failure) {
       setSaveError(failure instanceof DOMException
         ? "Браузер не смог сохранить работу. Проверьте свободное место и разрешение на хранение данных." : failure.message);
     }
   }
-  return <WorkspacePage title="Новая практическая работа" actions={<>
+  return <WorkspacePage title={initialWork ? "Редактирование практической работы" : "Новая практическая работа"} actions={<>
     {submitted && (saveError || error) && <span role="alert">{saveError || error}</span>}
     <Button size="xl" onClick={onClose}>Отмена</Button>
-    <Button size="xl" view="action" type="submit" extraProps={{form:"assignment-form"}}>Создать</Button>
+    <Button size="xl" view="action" type="submit" extraProps={{form:"assignment-form"}}>{initialWork ? "Сохранить" : "Создать"}</Button>
   </>}>
     <form id="assignment-form" className="subjectForm" onSubmit={submit}>
-      <JsonImport template="works" onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>
+      {!initialWork && <JsonImport template="works" onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>}
       {subject ? <span>{subject.title}</span> : <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
           options={subjects.map(s => ({value:s.id, content:s.title}))} onUpdate={([id]) => changeSubject(id)}/>

@@ -6,7 +6,7 @@ import MarkdownContent from "./MarkdownContent";
 
 const date = value => new Date(value).toLocaleString("ru-RU", {dateStyle:"long", timeStyle:"short"});
 
-export function AssignmentDetails({work, subject, teacher, onReturnToWorks}) {
+export function AssignmentDetails({work, subject, teacher, editBlocked, editError, onEdit, returnAction}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [query, setQuery] = useState("");
   const showNavigation = !teacher && work.activities.length > 1;
@@ -16,7 +16,10 @@ export function AssignmentDetails({work, subject, teacher, onReturnToWorks}) {
   }));
   const matchingOptions = options.filter(option => option.content.toLowerCase().includes(query.trim().toLowerCase()));
   const nextOption = options[selectedIndex + 1];
-  return <WorkspacePage title={work.title} onReturnToWorks={onReturnToWorks} actions={showNavigation && <>
+  return <WorkspacePage title={work.title} returnAction={returnAction} actions={teacher ? <>
+    {(editBlocked || editError) && <Text role="status">{editBlocked || editError}</Text>}
+    <Button disabled={Boolean(editBlocked)} view="action" size="l" onClick={onEdit}>Редактировать работу</Button>
+  </> : showNavigation && <>
     <Button view="outlined" size="l" disabled={selectedIndex === 0} onClick={() => setSelectedIndex(selectedIndex - 1)}>
       <Button.Icon><Icon data={ChevronLeft}/></Button.Icon>Назад
     </Button>

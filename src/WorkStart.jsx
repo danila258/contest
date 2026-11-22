@@ -1,5 +1,6 @@
 import React, {useState} from "react";
 import {Button, Card, Dialog, Text} from "@gravity-ui/uikit";
+import {editInProgress} from "./workAccess";
 import {WorkspacePage} from "./WorkspacePage";
 
 function ActivityConditions({item}) {
@@ -19,18 +20,19 @@ function ActivityConditions({item}) {
   </>;
 }
 
-export function WorkStart({work, subject, now, onReturnToWorks, onStart}) {
+export function WorkStart({work, subject, now, busy, returnAction, onStart}) {
   const [confirming,setConfirming] = useState(false);
   const [error,setError] = useState("");
   const expired = now >= Date.parse(work.dueAt);
   const empty = work.activities?.length === 0;
-  function confirm() {
+  React.useEffect(() => { setConfirming(false); setError(""); }, [work, busy]);
+  async function confirm() {
     setConfirming(false);
-    try { onStart(); }
-    catch { setError("Браузер не смог сохранить начало работы. Попробуйте ещё раз."); }
+    try { await onStart(); }
+    catch (failure) { setError(failure instanceof DOMException ? "Браузер не смог сохранить начало работы. Попробуйте ещё раз." : failure.message); }
   }
-  return <WorkspacePage title={work.title} onReturnToWorks={onReturnToWorks} actions={
-    <Button view="action" size="xl" disabled={expired || empty} onClick={() => setConfirming(true)}>Начать работу</Button>
+  return <WorkspacePage title={work.title} returnAction={returnAction} actions={
+    <Button view="action" size="xl" disabled={busy || expired || empty || now < Date.parse(work.opensAt)} onClick={() => setConfirming(true)}>Начать работу</Button>
   }>
     <div className="subjectInfo workConditions">
       <Text color="secondary">{subject.title}</Text>
@@ -45,6 +47,7 @@ export function WorkStart({work, subject, now, onReturnToWorks, onStart}) {
         </Card>)}
         {empty && <p>В работе пока нет заданий.</p>}
       </> : <p>В работе одно задание: {work.question ? "тест" : "задача по программированию"}. Отдельный таймер и лимит попыток не заданы.</p>}
+      {busy && <p role="status">{editInProgress}</p>}
       {expired && <p role="status">Срок сдачи истёк.</p>}
       {error && <p role="alert">{error}</p>}
     </div>

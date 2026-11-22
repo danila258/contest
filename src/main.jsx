@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import {
   Button,
   Card,
+  Checkbox,
   Label,
   Table,
   Text,
@@ -37,6 +38,7 @@ import { AssignmentForm } from "./AssignmentForm";
 import {collectTasks} from "./activityData";
 import imported from "./imported-data.json";
 import { TaskBank } from "./TaskBank";
+import {alreadyStarted, editInProgress, withWorkAccess, workHasStarted, useWorkBusy} from "./workAccess";
 import {WorkStart} from "./WorkStart";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
@@ -73,6 +75,14 @@ function useLocal(key, initial) {
       return initial;
     }
   });
+  React.useEffect(() => {
+    if (!["practice.starts","practice.library","practice.attempts","practice.drafts"].includes(key)) return;
+    function sync(event) {
+      if (event.key === key && event.newValue !== null) set(JSON.parse(event.newValue));
+    }
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [key]);
   return [
     value,
     (next) => {
@@ -114,6 +124,37 @@ function App() {
   const savedWorks = bank.works;
   const bankTasks = bank.tasks;
   const [creatingWork, setCreatingWork] = useState(false);
+  const releaseEditor = React.useRef(null);
+  const busy = useWorkBusy(active?.id);
+  const [editFailure, setEditFailure] = useState(null);
+  function closeForm() {
+    releaseEditor.current?.();
+    releaseEditor.current = null;
+    setCreatingWork(false);
+  }
+  React.useEffect(() => {
+    window.addEventListener("pagehide", closeForm);
+    return () => { window.removeEventListener("pagehide", closeForm); releaseEditor.current?.(); };
+  }, []);
+  React.useEffect(() => {
+    if (!creatingWork && active?.activities) {
+      const latest = savedWorks.find(work => work.id === active.id);
+      if (latest && latest !== active) open(latest);
+    }
+  }, [active, savedWorks, creatingWork]);
+  async function editWork() {
+    try {
+      setEditFailure(null);
+      await withWorkAccess(active.id, () => {
+        if (workHasStarted(active)) throw new Error(alreadyStarted);
+        return new Promise(resolve => {
+          releaseEditor.current = resolve;
+          setCreatingWork(true);
+        });
+      });
+    } catch (error) { setEditFailure({id:active.id, message:error.message}); }
+  }
+  const [includeClosed, setIncludeClosed] = useState(false);
   const [workSubject,setWorkSubject] = useState("");
   const [subjectQuery, setSubjectQuery] = useState("");
   const [subjectYear, setSubjectYear] = useState("");
@@ -158,6 +199,7 @@ function App() {
   const overview = page === "Обзор";
   const visibleWorks = works.filter(w => {
     if (!subject(w.subject)) return false;
+    if (teacher && catalogue && includeClosed && w.activities) return true;
     const opened = !w.opensAt || Date.parse(w.opensAt) <= now;
     return opened && ((!teacher && !overview) || deadlineOf(w) > now);
   });
@@ -179,10 +221,10 @@ function App() {
     select(s);
     filterSet("Все статусы");
   }
-  function returnToWorks() {
-    open(null);
-    if (!catalogue) go("Практические работы");
-  }
+  const returnAction = {
+    label: selected ? "К предмету" : overview ? "К обзору" : "К работам",
+    onClick: () => open(null),
+  };
   function submit() {
     const submittedAt = Date.now();
     if (submittedAt >= deadlineOf(active)) {
@@ -216,39 +258,51 @@ function App() {
     go("Предметы", saved.teachers.includes(demoTeacher) ? saved : null);
   }
   if (creatingWork && teacher) {
-    return <AssignmentForm subject={selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks}
+    return <AssignmentForm initialWork={active} subject={active ? subject(active.subject) : selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks}
       onImport={(data, fallback) => readWorkDraft(data,selected ? [selected] : all,fallback,bank,demoWorks)}
-      onClose={() => setCreatingWork(false)} onSave={work => {
+      onClose={closeForm} onSave={work => {
+      if (active && workHasStarted(active)) throw new Error(alreadyStarted);
       const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
         .map(item => ({...item, subject:work.subject}));
       const activities = work.activities.map(item => item.kind === "program"
         ? {...item, taskId:item.taskId ?? item.id} : item);
+      const saved = {...active,...work,activities};
       updateLibrary(current => {
-        if (current.works.some(w => w.id === work.id)) throw Error(`Работа с ID «${work.id}» уже существует.`);
-        return {...current, tasks:[...current.tasks,...newTasks], works:[...current.works,{...work,activities}]};
+        const existing = current.works.find(w => w.id === work.id);
+        if (active && JSON.stringify(existing) !== JSON.stringify(active)) {
+          throw Error("Работа изменилась в другой вкладке. Обновите страницу и снова откройте работу для редактирования.");
+        }
+        if (!active && existing) throw Error(`Работа с ID «${work.id}» уже существует.`);
+        return {...current, tasks:[...current.tasks,...newTasks], works:active ? current.works.map(w => w.id === work.id ? saved : w) : [...current.works,saved]};
       });
-      if (catalogue) {
+      if (active) open(saved);
+      if (!active && catalogue) {
         if (workSubject) setWorkSubject(work.subject);
         setWorkQuery("");
       }
       setNow(Date.now());
-      setCreatingWork(false);
+      closeForm();
       filterSet("Все статусы");
     }}/>;
   }
   if (active && !teacher && !Object.hasOwn(starts,active.id) && !Object.hasOwn(drafts,active.id)
       && !attempts[active.id]?.length && active.state !== "Зачтено") {
-    return <WorkStart work={active} subject={subject(active.subject)} now={now} onReturnToWorks={returnToWorks}
-      onStart={() => {
+    return <WorkStart work={active} subject={subject(active.subject)} now={now} returnAction={returnAction}
+      busy={busy} onStart={() => withWorkAccess(active.id, () => navigator.locks.request("practice.starts", () => {
         const time = Date.now();
         setNow(time);
+        const latest = JSON.parse(localStorage.getItem("practice.library"))?.works.find(w => w.id === active.id);
+        if (latest && JSON.stringify(latest) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
+        if (time < Date.parse(active.opensAt)) throw new Error("Время открытия работы ещё не наступило.");
         if (time >= deadlineOf(active) || active.activities?.length === 0) return;
         const saved = JSON.parse(localStorage.getItem("practice.starts")) ?? starts;
         saveStarts({...saved,[active.id]:saved[active.id] ?? new Date(time).toISOString()});
-      }}/>;
+      }))}/>;
   }
   if (active?.activities) {
-    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onReturnToWorks={returnToWorks}/>;
+    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onEdit={editWork}
+      editBlocked={teacher && (workHasStarted(active) ? alreadyStarted : busy ? editInProgress : "")}
+      editError={editFailure?.id === active.id ? editFailure.message : ""} returnAction={returnAction}/>;
   }
   if (settingsOpen && teacher) {
     return (
@@ -261,7 +315,7 @@ function App() {
   }
   if (active) {
     return (
-      <WorkspacePage title={active.title} onReturnToWorks={returnToWorks}>
+      <WorkspacePage title={active.title} returnAction={returnAction}>
         <div className="activity">
           <small>
             {subject(active.subject).title} · Сдать до {workDate(active)}
@@ -448,6 +502,7 @@ function App() {
       <h1>Практические работы</h1>
       <div className="assignmentControls">
         <SubjectFilter subjects={all} value={workSubject} onChange={setWorkSubject}/>
+        {teacher && <Checkbox checked={includeClosed} onUpdate={setIncludeClosed}>Включая будущие и завершённые работы</Checkbox>}
         {!teacher && filters}
         {teacher && <Button view="action" disabled={!all.length} onClick={() => setCreatingWork(true)}>
           Создать практическую работу
