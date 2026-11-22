@@ -37,6 +37,7 @@ import { AssignmentForm } from "./AssignmentForm";
 import {collectTasks} from "./activityData";
 import imported from "./imported-data.json";
 import { TaskBank } from "./TaskBank";
+import {WorkStart} from "./WorkStart";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
 import { WorkspacePage } from "./WorkspacePage";
@@ -92,6 +93,7 @@ function App() {
     [filter, filterSet] = useState("Все статусы");
   const [role, roleSet] = useLocal("practice.role", "Студент"),
     [extra, saveExtra] = useLocal("practice.subjects", []);
+  const [starts,saveStarts] = useLocal("practice.starts", {});
   const [drafts, saveDrafts] = useLocal("practice.drafts", {}),
     [attempts, saveAttempts] = useLocal("practice.attempts", {});
   const [active, open] = useState(null),
@@ -150,7 +152,7 @@ function App() {
     const result = attempts[work.id]?.at(-1)?.status;
     if (result) return result;
     if (availability === "Срок истёк" && work.state !== "Зачтено") return availability;
-    if (Object.hasOwn(drafts, work.id)) return "В работе";
+    if (Object.hasOwn(starts, work.id) || Object.hasOwn(drafts, work.id)) return "В работе";
     return work.state === "Доступна" ? availability : work.state ?? availability;
   }
   const overview = page === "Обзор";
@@ -176,6 +178,10 @@ function App() {
     pageSet(next);
     select(s);
     filterSet("Все статусы");
+  }
+  function returnToWorks() {
+    open(null);
+    if (!catalogue) go("Практические работы");
   }
   function submit() {
     const submittedAt = Date.now();
@@ -230,8 +236,19 @@ function App() {
       filterSet("Все статусы");
     }}/>;
   }
+  if (active && !teacher && !Object.hasOwn(starts,active.id) && !Object.hasOwn(drafts,active.id)
+      && !attempts[active.id]?.length && active.state !== "Зачтено") {
+    return <WorkStart work={active} subject={subject(active.subject)} now={now} onReturnToWorks={returnToWorks}
+      onStart={() => {
+        const time = Date.now();
+        setNow(time);
+        if (time >= deadlineOf(active) || active.activities?.length === 0) return;
+        const saved = JSON.parse(localStorage.getItem("practice.starts")) ?? starts;
+        saveStarts({...saved,[active.id]:saved[active.id] ?? new Date(time).toISOString()});
+      }}/>;
+  }
   if (active?.activities) {
-    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onBack={() => open(null)}/>;
+    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onReturnToWorks={returnToWorks}/>;
   }
   if (settingsOpen && teacher) {
     return (
@@ -244,7 +261,7 @@ function App() {
   }
   if (active) {
     return (
-      <WorkspacePage title={active.title} onBack={() => open(null)}>
+      <WorkspacePage title={active.title} onReturnToWorks={returnToWorks}>
         <div className="activity">
           <small>
             {subject(active.subject).title} · Сдать до {workDate(active)}

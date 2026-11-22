@@ -3,16 +3,14 @@ import { Button, Icon, Text } from "@gravity-ui/uikit";
 import { AppearanceSettings } from "./Appearance";
 import { ArrowLeft } from "@gravity-ui/icons";
 
-export function WorkspacePage({ title, onBack, actions, children }) {
+export function WorkspacePage({ title, onReturnToWorks, actions, children }) {
   return (
     <main className="workspacePage" aria-labelledby="workspace-page-title">
       <header className="workspacePageHeader">
-        {onBack && (
-          <Button view="outlined" size="xl" onClick={onBack}>
-            <Button.Icon>
-              <Icon data={ArrowLeft} size={20} />
-            </Button.Icon>
-            Назад
+        {onReturnToWorks && (
+          <Button view="flat" size="l" onClick={onReturnToWorks}>
+            <Button.Icon><Icon data={ArrowLeft}/></Button.Icon>
+            К работам
           </Button>
         )}
         <Text as="h1" variant="header-2" id="workspace-page-title">
