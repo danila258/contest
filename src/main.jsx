@@ -33,6 +33,7 @@ import { SubjectCover, coverSettings } from "./SubjectCover";
 import { currentSemester, inCurrentSemester, semesterLabel } from "./semester";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
+import { TaskBank, collectTasks } from "./TaskBank";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { WorkspacePage } from "./WorkspacePage";
 import { SubjectSettings, demoGroup, demoTeacher } from "./SubjectSettings";
@@ -79,7 +80,21 @@ function App() {
     [attempts, saveAttempts] = useLocal("practice.attempts", {});
   const [active, open] = useState(null),
     [settingsOpen, showSettings] = useState(false);
-  const [savedWorks, saveWorks] = useLocal("practice.works", []);
+  const [legacyWorks] = useLocal("practice.works", []);
+  const [library, saveLibrary] = useLocal("practice.library", null);
+  const initialLibrary = React.useMemo(() => ({
+    works: legacyWorks.map(work => ({...work, activities:work.activities?.map(item =>
+      item.kind === "program" ? {...item, taskId:item.taskId ?? item.id} : item)})),
+    tasks: collectTasks(legacyWorks),
+    questions: [],
+  }), [legacyWorks]);
+  const bank = library ?? initialLibrary;
+  function updateLibrary(change) {
+    const stored = localStorage.getItem("practice.library");
+    saveLibrary(change(stored ? JSON.parse(stored) : bank));
+  }
+  const savedWorks = bank.works;
+  const bankTasks = bank.tasks;
   const [creatingWork, setCreatingWork] = useState(false);
   const works = [...demoWorks, ...savedWorks];
   const [now, setNow] = useState(Date.now);
@@ -150,8 +165,12 @@ function App() {
     go("Предметы", saved.teachers.includes(demoTeacher) ? saved : null);
   }
   if (creatingWork && selected && teacher) {
-    return <AssignmentForm subject={selected} onClose={() => setCreatingWork(false)} onSave={work => {
-      saveWorks([...savedWorks, work]);
+    return <AssignmentForm subject={selected} bankTasks={bankTasks.filter(task => task.subject === selected.id)} onClose={() => setCreatingWork(false)} onSave={work => {
+      const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
+        .map(item => ({...item, subject:selected.id}));
+      const activities = work.activities.map(item => item.kind === "program"
+        ? {...item, taskId:item.taskId ?? item.id} : item);
+      updateLibrary(current => ({...current, tasks:[...current.tasks,...newTasks], works:[...current.works,{...work,activities}]}));
       setCreatingWork(false);
       filterSet("Все статусы");
     }}/>;
@@ -331,7 +350,7 @@ function App() {
       onUpdate={(v) => filterSet(v[0])}
     />
   );
-  return (
+  const renderWorkspace = content => (
     <WorkspaceNavigation page={page} go={go} teacher={teacher}>
       <main className="workspace">
         <header className="workspaceHeader">
@@ -350,7 +369,14 @@ function App() {
             }}
           />
         </header>
-        <article>
+        {content}
+      </main>
+    </WorkspaceNavigation>
+  );
+  if (teacher && page === "Банк задач") {
+    return <TaskBank subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
+  }
+  return renderWorkspace(<article>
           <div className="title">
             <div>
               <h1>
@@ -454,10 +480,7 @@ function App() {
               )}
             </div>
           )}
-        </article>
-      </main>
-    </WorkspaceNavigation>
-  );
+        </article>);
 }
 createRoot(document.querySelector("#root")).render(
   <ThemeProvider theme="light">

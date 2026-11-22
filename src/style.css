@@ -341,3 +341,11 @@ h2 {
   .assignmentPair, .subjectForm .assignmentPair { grid-template-columns: minmax(0, 1fr); }
   .sectionTitle:has(.assignmentControls) { flex-wrap: wrap; gap: 8px; }
 }
+
+.bankPage { display: grid; gap: 16px; align-content: start; }
+.bankPage .g-table { overflow-x: auto; }
+.bankPage { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.bankPage > * { min-width: 0; }
+.bankPage .g-table { max-width: 100%; }
+.bankPrompt { max-width: 44ch; white-space: normal; overflow-wrap: anywhere; }
+.bankPrompt summary { cursor: pointer; color: var(--g-color-text-secondary); }

@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {Button, Checkbox, Icon, TextInput} from "@gravity-ui/uikit";
+import {Button, Checkbox, Icon, Select, TextInput} from "@gravity-ui/uikit";
 import {Plus} from "@gravity-ui/icons";
 import {FormRow} from "@gravity-ui/components";
 import {WorkspacePage} from "./WorkspacePage";
@@ -9,7 +9,7 @@ function localMinute(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0,16);
 }
 
-function contentError(items) {
+export function contentError(items) {
   for (const [index, item] of items.entries()) {
     const prefix = `Задание ${index + 1}. `;
     if (!item.title.trim()) return prefix + "Укажите название.";
@@ -27,7 +27,7 @@ function contentError(items) {
   return "";
 }
 
-export function AssignmentForm({subject, onClose, onSave}) {
+export function AssignmentForm({subject, bankTasks, onClose, onSave}) {
   const [title,setTitle] = useState("");
   const [opens,setOpens] = useState(() => localMinute(new Date()));
   const [due,setDue] = useState("");
@@ -82,8 +82,14 @@ export function AssignmentForm({subject, onClose, onSave}) {
           <Button disabled={index === items.length-1} onClick={() => move(index,1)}>Ниже</Button>
           <Button onClick={() => setItems(items.filter(i => i.id !== item.id))}>Удалить задание</Button>
         </div>
-        <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>
+        {item.taskId ? <strong>{item.title}</strong> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
+      <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}
+        options={bankTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
+        onUpdate={([id]) => {
+          const task = bankTasks.find(entry => entry.id === id);
+          if (task) setItems([...items, {...task, taskId:id, id:crypto.randomUUID()}]);
+        }}/>
       <div className="assignmentControls">{[["quiz","Добавить тест"],["program","Добавить задачу"]].map(([kind,label]) =>
         <Button key={kind} size="l" onClick={() => setItems([...items,newActivity(kind)])}><Button.Icon><Icon data={Plus}/></Button.Icon>{label}</Button>)}</div>
     </form>
