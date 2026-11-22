@@ -10,6 +10,10 @@ import {WorkspacePage} from "./WorkspacePage";
 
 const MarkdownField = lazy(() => import("./MarkdownField"));
 
+function promptOf(item) {
+  return item.kind === "quiz" ? item.questions.map(q => q.prompt).join("\n\n") : item.prompt;
+}
+
 function PromptPreview({source}) {
   const [open,setOpen] = useState(false);
   return <details className="bankPrompt" onToggle={event => setOpen(event.currentTarget.open)}>
@@ -27,32 +31,32 @@ function BankEditor({initial, subjects, tasks, onClose, onSave}) {
   const update = patch => setItem(previous => ({...previous,...patch}));
   function submit(event) {
     event.preventDefault();
-    const problem = isTask ? contentError([item]) : !item.prompt.trim() && "Введите теоретический вопрос.";
+    const problem = item.kind !== "theory" ? contentError([item]) : !item.prompt.trim() && "Введите теоретический вопрос.";
     if (problem || !item.title.trim()) return setError(problem || "Введите название.");
     try { onSave({...item,title:item.title.trim()}); }
     catch { setError("Не удалось сохранить изменения в этом браузере."); }
   }
-  return <WorkspacePage title={isTask ? "Задача банка" : "Теоретический вопрос"} actions={<>
+  return <WorkspacePage title={item.kind === "quiz" ? (initial.existing ? "Редактирование теста" : "Новый тест") : isTask ? "Задача банка" : "Теоретический вопрос"} actions={<>
     {error && <span role="alert">{error}</span>}
     <Button size="xl" onClick={onClose}>Отмена</Button>
-    <Button size="xl" view="action" type="submit" extraProps={{form:"bank-editor"}}>Сохранить</Button>
+    <Button size="xl" view="action" type="submit" extraProps={{form:"bank-editor"}}>{item.kind === "quiz" && !initial.existing ? "Создать" : "Сохранить"}</Button>
   </>}>
     <form className="subjectForm" id="bank-editor" onSubmit={submit}>
       <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет материала" disabled={initial.existing} filterable value={[item.subject]} options={options(subjects)}
           onUpdate={([subject]) => update({subject,taskIds:[]})}/>
       </fieldset>
-      {isTask ? <ActivityFields item={item} update={update}/> : <>
+      {item.kind !== "theory" ? <ActivityFields item={item} update={update}/> : <>
         <Input label="Название вопроса" value={item.title} onUpdate={title => update({title})}/>
         <Suspense fallback={<p>Загрузка редактора…</p>}>
           <MarkdownField label="Теоретический вопрос" placeholder="Как выбор структуры данных влияет на сложность поиска?"
             value={item.prompt} onChange={prompt => update({prompt})}/>
         </Suspense>
-        <fieldset><legend>Связанные задачи</legend>
+      </>}
+      {!isTask && <fieldset><legend>Связанные задачи</legend>
           <Select aria-label="Связанные задачи" multiple filterable placeholder="Весь предмет" value={item.taskIds}
             options={options(tasks.filter(t => t.subject === item.subject))} onUpdate={taskIds => update({taskIds})}/>
-        </fieldset>
-      </>}
+        </fieldset>}
     </form>
   </WorkspacePage>;
 }
@@ -66,7 +70,7 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
   const taskNames = new Map(tasks.map(t => [t.id,t.title]));
   const isTasks = section === "tasks";
   const rows = (isTasks ? tasks : bank.questions).filter(row => accessible.has(row.subject) &&
-    (!subject || row.subject === subject) && (row.title + " " + row.prompt).toLowerCase().includes(query.toLowerCase()));
+    (!subject || row.subject === subject) && (row.title + " " + promptOf(row)).toLowerCase().includes(query.toLowerCase()));
   function edit(item) { setEditor(item); }
   if (editor) return <BankEditor initial={editor} subjects={subjects} tasks={tasks} onClose={() => setEditor(null)}
     onSave={({existing, ...record}) => {
@@ -74,14 +78,14 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
       setEditor(null);
     }}/>;
   return renderWorkspace(<article className="bankPage">
-    <h1>Банк задач</h1>
+    <h1>Банк задач и тестов</h1>
     <div className="assignmentControls">
-      <Select aria-label="Раздел банка" value={[section]} options={[{value:"tasks",content:"Задачи по программированию"},{value:"questions",content:"Теоретические вопросы"}]}
+      <Select aria-label="Раздел банка" value={[section]} options={[{value:"tasks",content:"Задачи"},{value:"questions",content:"Тесты"}]}
         onUpdate={([value]) => {setSection(value); setQuery("");}}/>
       <SubjectFilter subjects={subjects} value={subject} onChange={value => {setSubject(value);}}/>
       <Button view="action" disabled={!subjects.length} onClick={() => edit({...(
-        isTasks ? newActivity("program") : {id:crypto.randomUUID(),kind:"theory",title:"",prompt:"",taskIds:[]}
-      ),subject:subject || subjects[0].id})}>{isTasks ? "Создать задачу" : "Создать вопрос"}</Button>
+        isTasks ? newActivity("program") : {...newActivity("quiz"),taskIds:[]}
+      ),subject:subject || subjects[0].id})}>{isTasks ? "Создать задачу" : "Создать тест"}</Button>
     </div>
     <TextInput aria-label="Поиск по банку" placeholder="Найти по названию или условию" value={query} onUpdate={setQuery} hasClear/>
     <JsonImport template="tasks" onImport={data => {
@@ -94,8 +98,8 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
       return count;
     }}/>
     <Table width="max" wordWrap data={rows} emptyMessage="Материалов по этому запросу нет." columns={[
-      {id:"title",name:isTasks ? "Задача" : "Вопрос",template:row => <Button view="flat" onClick={() => edit({...row,existing:true})}>{row.title}</Button>},
-      {id:"prompt",name:"Условие",template:row => <PromptPreview source={row.prompt}/>},
+      {id:"title",name:isTasks ? "Задача" : "Название",template:row => <Button view="flat" onClick={() => edit({...row,existing:true})}>{row.title}</Button>},
+      {id:"prompt",name:"Условие",template:row => <PromptPreview source={promptOf(row)}/>},
       {id:"subject",name:"Предмет",template:row => accessible.get(row.subject)},
       ...(!isTasks ? [{id:"scope",name:"Связанные задачи",template:row => row.taskIds.length ? row.taskIds.map(id => taskNames.get(id)).join(", ") : "Весь предмет"}] : [])
     ]}/>

@@ -423,7 +423,7 @@ function App() {
       </main>
     </WorkspaceNavigation>
   );
-  if (teacher && page === "Банк задач") {
+  if (teacher && page === "Банк задач и тестов") {
     return <TaskBank subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
   }
   if (catalogue) {

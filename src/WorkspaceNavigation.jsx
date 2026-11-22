@@ -18,7 +18,7 @@ export function WorkspaceNavigation({ page, go, teacher, children }) {
     narrowScreen.addEventListener("change", update);
     return () => narrowScreen.removeEventListener("change", update);
   }, []);
-  const links = teacher ? [...pages, {id: "Банк задач", icon: Code}] : pages;
+  const links = teacher ? [...pages, {id: "Банк задач и тестов", icon: Code}] : pages;
   const items = links.map(({ id, icon }) => ({
     id,
     icon,
