@@ -70,7 +70,6 @@ h2 {
 }
 .card,
 .workList,
-.deadlines,
 .subjectInfo > div {
   background: var(--g-color-base-background);
 }
@@ -125,17 +124,13 @@ h2 {
   align-items: center;
   gap: 7px;
 }
-.columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1.9fr) minmax(215px, 1fr);
-  gap: 22px;
+.overviewWorks {
   margin-top: 32px;
 }
 .workList {
   overflow: auto;
 }
-.workName,
-.deadlineItem {
+.workName {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -143,19 +138,8 @@ h2 {
 .workName > span {
   padding-inline-start: 8px;
 }
-.deadlines,
 .subjectInfo > div {
   padding: 16px;
-}
-.deadlines {
-  height: fit-content;
-}
-.deadlineItem {
-  padding-block: 6px;
-  white-space: normal;
-}
-.deadlines .sectionTitle h2 {
-  font-size: 18px;
 }
 .activity {
   display: grid;
@@ -243,11 +227,6 @@ h2 {
 .markdownContent img { max-width: 100%; }
 .subjectForm .markdownField { display: block; }
 
-@media (max-width: 880px) {
-  .columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 @media (max-width: 620px) {
   .cards {
     grid-template-columns: minmax(0, 1fr);

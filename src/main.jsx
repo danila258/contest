@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   Label,
-  Menu,
   Table,
   Text,
   Icon,
@@ -16,9 +15,7 @@ import {
 } from "@gravity-ui/uikit";
 import {
   BookOpen,
-  Calendar,
   ChevronRight,
-  Clock,
   Code,
   ListUl,
   Plus,
@@ -120,13 +117,21 @@ function App() {
   const subject = (id) => listedSubjects.find((s) => s.id === id);
   const deadlineOf = (w) => w.dueAt ? Date.parse(w.dueAt) : deadline(w.day).setHours(23,59,59,999);
   const workDate = (w) => w.dueAt ? new Date(w.dueAt).toLocaleString("ru-RU", {dateStyle:"short", timeStyle:"short"}) : dateLabel(w.day) + " · До 23:59";
-  const state = (w) => w.activities
-    ? (Date.parse(w.opensAt) > now ? "Запланирована" : deadlineOf(w) <= now ? "Срок истёк" : "Доступна")
-    : attempts[w.id]?.at(-1)?.status || w.state;
-  const visibleWorks = works.filter((w) => subject(w.subject) && (teacher || !w.opensAt || Date.parse(w.opensAt) <= now));
-  const upcoming = visibleWorks.filter(
-    (w) => deadlineOf(w) > now && state(w) !== "Зачтено",
-  ).sort((a,b) => deadlineOf(a) - deadlineOf(b));
+  function state(work) {
+    const availability = deadlineOf(work) <= now ? "Срок истёк" : "Доступна";
+
+    const result = attempts[work.id]?.at(-1)?.status;
+    if (result) return result;
+    if (Object.hasOwn(drafts, work.id)) return "В работе";
+    return work.state === "Доступна" ? availability : work.state ?? availability;
+  }
+  const overview = page === "Обзор";
+  const visibleWorks = works.filter(w => {
+    if (!subject(w.subject)) return false;
+    const opened = !w.opensAt || Date.parse(w.opensAt) <= now;
+    return opened && ((!teacher && !overview) || deadlineOf(w) > now);
+  });
+  if (overview) visibleWorks.sort((a, b) => deadlineOf(a) - deadlineOf(b));
   const displayWorks = visibleWorks.filter(
     (w) =>
       (!selected || w.subject === selected.id) &&
@@ -296,11 +301,11 @@ function App() {
         data={displayWorks}
         getRowDescriptor={(w) => ({ id: w.id })}
         onRowClick={open}
-        emptyMessage="Работ пока нет."
+        emptyMessage={overview && filter === "Все статусы" ? "Сейчас нет работ с открытым сроком начала попыток." : "Работ пока нет."}
         columns={[
           {
             id: "title",
-            name: "Работа",
+            name: "Название",
             template: (w) => (
               <div className="workName">
                 <Button
@@ -319,8 +324,8 @@ function App() {
               </div>
             ),
           },
-          {id: "deadline", name: "Начать до", template: workDate},
-          {
+          {id: "deadline", name: "Сдать до", template: workDate},
+          ...(teacher ? [] : [{
             id: "status",
             name: "Статус",
             template: (w) => (
@@ -328,7 +333,7 @@ function App() {
                 {state(w)}
               </Label>
             ),
-          },
+          }]),
         ]}
       />
     </Card>
@@ -339,13 +344,9 @@ function App() {
       value={[filter]}
       options={opts([
         "Все статусы",
-        ...(teacher ? ["Запланирована"] : []),
-        "Срок истёк",
-        "В работе",
+        ...(!overview ? ["Срок истёк"] : []),
         "Доступна",
-        "Зачтено",
-        "Отправлено",
-        "На доработке",
+        "В работе", "Зачтено", "Отправлено", "На доработке",
       ])}
       onUpdate={(v) => filterSet(v[0])}
     />
@@ -421,44 +422,17 @@ function App() {
             </section>
           )}
           {(page === "Обзор" || page === "Практические работы" || selected) && (
-            <div className={page === "Обзор" ? "columns" : ""}>
-              <section>
-                <div className="sectionTitle">
-                  <h2>Практические работы</h2>
-                  <div className="assignmentControls">{filters}
-                    {teacher && selected && <Button view="action" onClick={() => setCreatingWork(true)}>
-                      <Button.Icon><Icon data={Plus}/></Button.Icon>Создать практическую работу
-                    </Button>}
-                  </div>
+            <section className={overview ? "overviewWorks" : undefined}>
+              <div className="sectionTitle">
+                <h2>Практические работы</h2>
+                <div className="assignmentControls">{!teacher && filters}
+                  {teacher && selected && <Button view="action" onClick={() => setCreatingWork(true)}>
+                    <Button.Icon><Icon data={Plus}/></Button.Icon>Создать практическую работу
+                  </Button>}
                 </div>
-                {table}
-              </section>
-              {page === "Обзор" && (
-                <Card className="deadlines">
-                  <div className="sectionTitle">
-                    <h2>Ближайшие сроки</h2>
-                    {ico(Calendar)}
-                  </div>
-                  <Menu aria-label="Предстоящие работы">
-                    {upcoming.map((w) => (
-                      <Menu.Item
-                        key={w.id}
-                        onClick={() => open(w)}
-                        iconStart={ico(Clock, 16)}
-                      >
-                        <div className="deadlineItem">
-                          <Text variant="body-2">{w.title}</Text>
-                          <Text variant="caption-2" color="secondary">
-                            {workDate(w)}
-                          </Text>
-                        </div>
-                      </Menu.Item>
-                    ))}
-                  </Menu>
-                  {!upcoming.length && <p>Ближайших сроков нет.</p>}
-                </Card>
-              )}
-            </div>
+              </div>
+              {table}
+            </section>
           )}
           {selected && (
             <div className="subjectInfo">
