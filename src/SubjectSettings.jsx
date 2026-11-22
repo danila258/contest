@@ -9,10 +9,7 @@ import { WorkspacePage } from "./WorkspacePage";
 
 const MarkdownField = React.lazy(() => import("./MarkdownField"));
 
-export const demoTeacher = "Ирина Волкова";
-export const demoGroup = "ИВТ-24";
-const groups = [demoGroup, "ИВТ-25", "ПИ-24"];
-const teachers = [demoTeacher, "Андрей Соколов", "Мария Орлова"];
+import {demoGroup, demoTeacher, groups, teachers} from "./subjectOptions";
 
 export function SubjectSettings({ subject, onSave, onClose }) {
   const current = currentSemester();

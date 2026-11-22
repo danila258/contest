@@ -336,3 +336,6 @@ h2 {
   background-color: color-mix(in srgb, var(--cover-ink) 36%, var(--g-color-base-background));
   color: var(--cover-fill);
 }
+
+.importErrorBody { overflow-wrap: anywhere; white-space: pre-wrap; }
+.importErrorBody p + p { margin-top: 8px; }

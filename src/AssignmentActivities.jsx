@@ -1,24 +1,13 @@
 import React, {lazy, Suspense, useId, useState} from "react";
 import {Button, Checkbox, Select, TextArea, TextInput} from "@gravity-ui/uikit";
 import {FormRow} from "@gravity-ui/components";
-import {starter} from "./data";
+import {files, answer, testCase, question} from "./activityData";
 
 const MarkdownField = lazy(() => import("./MarkdownField"));
 const CodeEditor = lazy(() => import("./CodeEditor"));
-const id = () => crypto.randomUUID();
-const answer = () => ({id: id(), text: "", correct: false});
-const question = () => ({id: id(), prompt: "", minutes: "5", answers: [answer(), answer()]});
-const testCase = () => ({id: id(), input: "", output: "", code: ""});
-export const files = ["main.cpp", "task_name.cpp", "task_name.h"];
 const checks = {format: "Форматирование", static: "Статический анализ", dynamic: "Динамический анализ"};
 
-export function newActivity(kind) {
-  const common = {id: id(), kind, title: ""};
-  if (kind === "quiz") return {...common, attempts: "1", threshold: "1", back: true, shuffle: false,
-    timer: "whole", minutes: "30", questions: [question()]};
-  return {...common, prompt: "", mode: "stdout", sources: {"main.cpp": starter}, cases: [testCase()],
-    reference: "", minutes: "", logs: false, checks: {format: "off", static: "off", dynamic: "off"}};
-}
+export {newActivity} from "./activityData";
 
 export function Input({label, value, onUpdate, required = true, type = "text", placeholder, ...limits}) {
   const fieldId = useId();

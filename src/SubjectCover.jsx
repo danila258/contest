@@ -14,18 +14,8 @@ import {
   NodesDown,
 } from "@gravity-ui/icons";
 
-const colors = {
-  blue: "Синий",
-  green: "Зелёный",
-  purple: "Фиолетовый",
-  orange: "Оранжевый",
-  gray: "Серый",
-  red: "Красный",
-  yellow: "Жёлтый",
-  teal: "Бирюзовый",
-  pink: "Розовый",
-  indigo: "Индиго",
-};
+import {colors} from "./subjectOptions";
+
 const icons = {
   code: [CurlyBrackets, "Код"],
   tree: [NodesDown, "Алгоритмы"],

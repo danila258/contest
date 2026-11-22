@@ -25,22 +25,38 @@ import {
 import "@gravity-ui/uikit/styles/fonts.css";
 import "@gravity-ui/uikit/styles/styles.css";
 import "./style.css";
-import { subjects, works as demoWorks, deadline, starter } from "./data";
+import { subjects as demoSubjects, works as demoWorks, deadline, starter } from "./data";
 
 import { SubjectCover, coverSettings } from "./SubjectCover";
 import { academicYearOf, currentSemester, inCurrentSemester, semesterLabel } from "./semester";
+import {JsonImport} from "./JsonImport";
+import {readSubjects, readWorks} from "./importData";
 import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
-import { TaskBank, collectTasks } from "./TaskBank";
+import {collectTasks} from "./activityData";
+import imported from "./imported-data.json";
+import { TaskBank } from "./TaskBank";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
 import { WorkspacePage } from "./WorkspacePage";
-import { SubjectSettings, demoGroup, demoTeacher } from "./SubjectSettings";
+import {demoGroup, demoTeacher} from "./subjectOptions";
+import { SubjectSettings } from "./SubjectSettings";
 
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import MarkdownContent from "./MarkdownContent";
+
+const subjects = [...demoSubjects,...imported.subjects];
+
+function withImportedData(local) {
+  const merged = {};
+  for (const key of ["tasks","questions","works"]) {
+    const ids = new Set(local[key].map(row => row.id));
+    merged[key] = [...imported[key].filter(row => !ids.has(row.id)),...local[key]];
+  }
+  return merged;
+}
 
 const CodeEditor = React.lazy(() => import("./CodeEditor"));
 
@@ -88,10 +104,10 @@ function App() {
     tasks: collectTasks(legacyWorks),
     questions: [],
   }), [legacyWorks]);
-  const bank = library ?? initialLibrary;
+  const bank = React.useMemo(() => withImportedData(library ?? initialLibrary), [library, initialLibrary]);
   function updateLibrary(change) {
     const stored = localStorage.getItem("practice.library");
-    saveLibrary(change(stored ? JSON.parse(stored) : bank));
+    saveLibrary(change(stored ? withImportedData(JSON.parse(stored)) : bank));
   }
   const savedWorks = bank.works;
   const bankTasks = bank.tasks;
@@ -417,6 +433,16 @@ function App() {
       </div>
       <TextInput controlProps={{"aria-label":"Поиск по практическим работам"}} placeholder="Найти по названию работы"
         value={workQuery} onUpdate={setWorkQuery} hasClear/>
+      {teacher && <JsonImport key="works" template="works" onImport={data => {
+        let count;
+        updateLibrary(current => {
+          const added = readWorks(data,all,workSubject,current,demoWorks);
+          count = added.works.length;
+          return {...current, works:[...current.works,...added.works], tasks:[...current.tasks,...added.tasks]};
+        });
+        setNow(Date.now());
+        return count;
+      }}/>}
       {table}
     </article>);
   }
@@ -446,6 +472,12 @@ function App() {
       </div>
       <TextInput controlProps={{"aria-label":"Поиск по предметам"}} placeholder="Найти по названию предмета"
         value={subjectQuery} onUpdate={setSubjectQuery} hasClear/>
+      {teacher && <JsonImport key="subjects" template="subjects" onImport={data => {
+        const stored = JSON.parse(localStorage.getItem("practice.subjects")) ?? extra;
+        const added = readSubjects(data,[...subjects,...stored]);
+        saveExtra([...stored,...added]);
+        return added.length;
+      }}/>}
       {matches.length ? renderCards(matches) : <p role="status">
         {query || subjectYear ? "По выбранным условиям предметов нет." : "Предметов пока нет."}
       </p>}
