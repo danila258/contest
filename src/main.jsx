@@ -28,7 +28,7 @@ import "./style.css";
 import { subjects, works as demoWorks, deadline, starter } from "./data";
 
 import { SubjectCover, coverSettings } from "./SubjectCover";
-import { currentSemester, inCurrentSemester, semesterLabel } from "./semester";
+import { academicYearOf, currentSemester, inCurrentSemester, semesterLabel } from "./semester";
 import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
@@ -97,6 +97,8 @@ function App() {
   const bankTasks = bank.tasks;
   const [creatingWork, setCreatingWork] = useState(false);
   const [workSubject,setWorkSubject] = useState("");
+  const [subjectQuery, setSubjectQuery] = useState("");
+  const [subjectYear, setSubjectYear] = useState("");
   const [workQuery,setWorkQuery] = useState("");
   const catalogue = page === "Практические работы";
   const [datedDemoWorks] = useState(() => demoWorks.map(work => {
@@ -149,6 +151,10 @@ function App() {
       (filter === "Все статусы" || filter === state(w)),
   );
   function go(next, s = null) {
+    if (next !== "Предметы") {
+      setSubjectQuery("");
+      setSubjectYear("");
+    }
     setWorkSubject("");
     setWorkQuery("");
     pageSet(next);
@@ -288,9 +294,9 @@ function App() {
       </WorkspacePage>
     );
   }
-  const cards = (
+  const renderCards = (items) => (
     <div className="cards">
-      {listedSubjects.map((s) => (
+      {items.map((s) => (
         <Card
           type="action"
           className="card"
@@ -414,6 +420,37 @@ function App() {
       {table}
     </article>);
   }
+  const subjectAction = teacher && (
+    <Button view={selected ? "outlined" : "action"} onClick={() => showSettings(true)}>
+      {!selected && (
+        <Button.Icon>
+          <Icon data={Plus} />
+        </Button.Icon>
+      )}
+      {selected ? "Настройки предмета" : "Создать предмет"}
+    </Button>
+  );
+  if (page === "Предметы" && !selected) {
+    const years = [...new Set(all.map(academicYearOf).filter(Boolean))].sort().reverse();
+    const query = subjectQuery.trim().toLowerCase();
+    const matches = all.filter(s =>
+      (!subjectYear || academicYearOf(s) === subjectYear) && s.title.toLowerCase().includes(query)
+    );
+    return renderWorkspace(<article className="bankPage">
+      <h1>Предметы</h1>
+      <div className="assignmentControls">
+        <Select aria-label="Учебный год" filterable value={[subjectYear]}
+          options={[{value:"", content:"Все учебные годы"}, ...opts(years)]}
+          onUpdate={([year]) => setSubjectYear(year)}/>
+        {subjectAction}
+      </div>
+      <TextInput controlProps={{"aria-label":"Поиск по предметам"}} placeholder="Найти по названию предмета"
+        value={subjectQuery} onUpdate={setSubjectQuery} hasClear/>
+      {matches.length ? renderCards(matches) : <p role="status">
+        {query || subjectYear ? "По выбранным условиям предметов нет." : "Предметов пока нет."}
+      </p>}
+    </article>);
+  }
   return renderWorkspace(<article>
           <div className="title">
             <div>
@@ -431,16 +468,7 @@ function App() {
                       : "Задания по всем предметам."}
               </p>
             </div>
-            {teacher && (
-              <Button view={selected ? "outlined" : "action"} onClick={() => showSettings(true)}>
-                {!selected && (
-                  <Button.Icon>
-                    <Icon data={Plus} />
-                  </Button.Icon>
-                )}
-                {selected ? "Настройки предмета" : "Создать предмет"}
-              </Button>
-            )}
+            {subjectAction}
           </div>
           {!selected && (
             <section>
@@ -455,7 +483,7 @@ function App() {
                   </Button>
                 </div>
               )}
-              {listedSubjects.length ? cards : <p>Предметов пока нет.</p>}
+              {listedSubjects.length ? renderCards(listedSubjects) : <p>Предметов пока нет.</p>}
             </section>
           )}
           {(overview || selected) && (
