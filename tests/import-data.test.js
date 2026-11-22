@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
-import {readBank, readSubjects, readWorks} from "../src/importData.js";
+import {readBank, readSubjects, readWorks, readWorkDraft, readActivityDrafts} from "../src/importData.js";
 import {currentSemester} from "../src/semester.js";
 import {demoTeacher} from "../src/subjectOptions.js";
 import {subjects, works as demos} from "../src/data.js";
@@ -20,7 +20,7 @@ function readWork(work, bank = library()) {
 }
 
 test("downloadable templates start with an English format description for agents", () => {
-  for (const name of ["subjects", "tasks", "works"]) {
+  for (const name of ["subjects", "tasks", "works", "activities", "quiz", "program"]) {
     const data = template(name);
     assert.equal(Object.keys(data)[0], "_comment");
     assert.match(data._comment, /For AI agents:/);
@@ -164,4 +164,36 @@ test("new and imported quizzes shuffle answers and disable backtracking by defau
   const configured = imported();
   assert.equal(configured.shuffle, false);
   assert.equal(configured.back, true);
+});
+
+test("a JSON draft preserves the work ID, editable inline tasks and attached bank tasks", () => {
+  const data = template("works");
+  const [row] = data.works;
+  const bank = library();
+  const before = structuredClone(bank);
+  const draft = readWorkDraft(data,subjects,null,bank,demos);
+  assert.equal(draft.id,row.id);
+  assert.equal(draft.activities[0].kind,"quiz");
+  assert.equal(draft.activities[1].taskId,row.activities[1].taskId);
+  assert.equal(draft.activities[2].taskId,undefined);
+  assert.equal(draft.activities[2].reference,row.activities[2].reference);
+  assert.deepEqual(bank,before);
+  assert.throws(() => readWorkDraft({works:[row,row]},subjects,null,bank,demos),/одной работой/);
+});
+
+test("activity import appends editable quizzes and tasks in file order using fresh IDs", () => {
+  const data = template("activities");
+  const items = readActivityDrafts(data,"cpp");
+  assert.deepEqual(items.map(item => item.kind), ["quiz","program"]);
+  assert.equal(items[1].subject,"cpp");
+  assert.equal(items[1].reference,data.activities[1].reference);
+  for (const kind of ["quiz","program"]) {
+    const [item] = readActivityDrafts(template(kind),"cpp",kind);
+    assert.equal(item.kind,kind);
+    assert.notEqual(item.id,items.find(entry => entry.kind === kind).id);
+  }
+  assert.throws(() => readActivityDrafts(data,"cpp","quiz"), /одним тестом/);
+  assert.throws(() => readActivityDrafts(template("quiz"),"cpp","program"), /одной задачей/);
+  data.activities[1].cases = [{code:"invalid for stdout"}];
+  assert.throws(() => readActivityDrafts(data,"cpp"), /activities\.1\.cases/);
 });

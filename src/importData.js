@@ -115,8 +115,27 @@ const localDate = text.regex(/^\d{4}-\d\d-\d\dT\d\d:\d\d$/, "Ожидается 
     if (!Number.isFinite(d.getTime())) return false;
     return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16) === value;
   }, "Несуществующая дата или время.");
+const inlineProgram = object({kind:z.literal("program"), ...programFields});
+const inlineActivity = z.discriminatedUnion("kind",[quiz,inlineProgram]);
+
+function editableActivity(activity, subject, path) {
+  if (activity.kind === "program") return program(activity,subject,path);
+  if (Number(activity.threshold) > activity.questions.length || (activity.back && activity.timer === "question")) {
+    throw Error(`${path} — проверьте порог зачёта и совместимость таймера с возвратом к вопросам.`);
+  }
+  return {...activity,id:newId()};
+}
+
+export function readActivityDrafts(data, subject, kind) {
+  const {activities} = parse(object({_comment:text.optional(), activities:z.array(inlineActivity).min(1)}),data);
+  if (kind && (activities.length !== 1 || activities[0].kind !== kind)) {
+    throw Error(kind === "quiz" ? "Выберите файл с одним тестом." : "Выберите файл с одной задачей на программирование.");
+  }
+  return activities.map((activity,i) => editableActivity(activity,subject,`activities.${i}`));
+}
+
 const workSchema = object({id:key, subject:id.optional(), title, opensAt:localDate, dueAt:localDate,
-  sequential:flag, review:flag, activities:z.array(z.union([quiz,object({kind:z.literal("program"), ...programFields}),object({taskId:id})])).default([])});
+  sequential:flag, review:flag, activities:z.array(z.union([inlineActivity,object({taskId:id})])).default([])});
 
 export function readWorks(data, subjects, fallback, current, demoWorks) {
   const rows = parse(object({_comment:text.optional(),works:z.array(workSchema).min(1)}),data).works;
@@ -138,17 +157,21 @@ export function readWorks(data, subjects, fallback, current, demoWorks) {
         const task = linkedTask(current.tasks,activity.taskId,subject.id,itemPath);
         return {...task,id:newId(),taskId:task.id};
       }
-      if (activity.kind === "quiz") {
-        if (Number(activity.threshold) > activity.questions.length || (activity.back && activity.timer === "question")) {
-          throw Error(`${itemPath} — проверьте порог зачёта и совместимость таймера с возвратом к вопросам.`);
-        }
-        return {...activity,id:newId()};
-      }
-      const task = program(activity,subject.id,itemPath);
-      tasks.push(task);
-      return {...task,taskId:task.id};
+      const item = editableActivity(activity,subject.id,itemPath);
+      if (item.kind === "quiz") return item;
+      tasks.push(item);
+      return {...item,taskId:item.id};
     });
     return {...w, subject:subject.id, opensAt:new Date(w.opensAt).toISOString(), dueAt:new Date(w.dueAt).toISOString(), activities};
   });
   return {works,tasks};
+}
+
+export function readWorkDraft(data, subjects, fallback, current, demoWorks) {
+  if (Array.isArray(data?.works) && data.works.length > 1) {
+    throw Error("Для этой формы выберите файл с одной работой. Несколько работ можно импортировать в разделе «Практические работы».");
+  }
+  const {works:[work], tasks} = readWorks(data,subjects,fallback,current,demoWorks);
+  const inlineTasks = new Map(tasks.map(task => [task.id,task]));
+  return {...work, activities:work.activities.map(item => inlineTasks.get(item.taskId) ?? item)};
 }

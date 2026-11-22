@@ -1,0 +1,31 @@
+{
+  "_comment": "For AI agents: Supply one quiz in activities to fill a quiz editor. Include title, questions with Markdown prompts and answers with text and correct flags. Each question requires a correct answer. attempts and threshold are positive integers; threshold cannot exceed question count. shuffle defaults to true and back to false. timer=whole uses quiz minutes; timer=question uses question minutes and requires back=false.",
+  "activities": [
+    {
+      "kind": "quiz",
+      "title": "Типы данных",
+      "attempts": 2,
+      "threshold": 1,
+      "back": false,
+      "shuffle": true,
+      "timer": "question",
+      "minutes": 15,
+      "questions": [
+        {
+          "prompt": "Какой тип хранит целые числа?",
+          "minutes": 3,
+          "answers": [
+            {
+              "text": "int",
+              "correct": true
+            },
+            {
+              "text": "double",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

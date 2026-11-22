@@ -1,0 +1,28 @@
+{
+  "_comment": "For AI agents: Supply one program in activities to fill a programming task editor. Set title and Markdown prompt. mode=stdout uses main.cpp and input/output cases; mode=unit supports main.cpp, task_name.cpp, task_name.h and cases with code. reference contains literal C++, minutes is a positive solving limit or an empty string, logs is boolean, and each check is off, warn or block.",
+  "activities": [
+    {
+      "kind": "program",
+      "title": "Удвоение",
+      "prompt": "Выведите удвоенное число.",
+      "mode": "stdout",
+      "sources": {
+        "main.cpp": "#include <iostream>\nint main() {}"
+      },
+      "cases": [
+        {
+          "input": "5",
+          "output": "10"
+        }
+      ],
+      "reference": "#include <iostream>\nint main() { int n; std::cin >> n; std::cout << 2*n; }",
+      "minutes": "",
+      "logs": false,
+      "checks": {
+        "format": "off",
+        "static": "warn",
+        "dynamic": "block"
+      }
+    }
+  ]
+}

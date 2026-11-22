@@ -1,0 +1,54 @@
+{
+  "_comment": "For AI agents: Append an ordered array of quizzes and programming tasks to the current assignment draft. Use the same inline quiz and program fields as works-template.json. The current subject is used automatically and ids are generated. No assignment title, dates or bank task IDs are required.",
+  "activities": [
+    {
+      "kind": "quiz",
+      "title": "Типы данных",
+      "attempts": 2,
+      "threshold": 1,
+      "back": false,
+      "shuffle": true,
+      "timer": "question",
+      "minutes": 15,
+      "questions": [
+        {
+          "prompt": "Какой тип хранит целые числа?",
+          "minutes": 3,
+          "answers": [
+            {
+              "text": "int",
+              "correct": true
+            },
+            {
+              "text": "double",
+              "correct": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "program",
+      "title": "Удвоение",
+      "prompt": "Выведите удвоенное число.",
+      "mode": "stdout",
+      "sources": {
+        "main.cpp": "#include <iostream>\nint main() {}"
+      },
+      "cases": [
+        {
+          "input": "5",
+          "output": "10"
+        }
+      ],
+      "reference": "#include <iostream>\nint main() { int n; std::cin >> n; std::cout << 2*n; }",
+      "minutes": "",
+      "logs": false,
+      "checks": {
+        "format": "off",
+        "static": "warn",
+        "dynamic": "block"
+      }
+    }
+  ]
+}

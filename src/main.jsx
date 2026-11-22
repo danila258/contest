@@ -30,7 +30,7 @@ import { subjects as demoSubjects, works as demoWorks, deadline, starter } from 
 import { SubjectCover, coverSettings } from "./SubjectCover";
 import { academicYearOf, currentSemester, inCurrentSemester, semesterLabel } from "./semester";
 import {JsonImport} from "./JsonImport";
-import {readSubjects, readWorks} from "./importData";
+import {readSubjects, readWorks, readWorkDraft} from "./importData";
 import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
@@ -210,12 +210,17 @@ function App() {
     go("Предметы", saved.teachers.includes(demoTeacher) ? saved : null);
   }
   if (creatingWork && teacher) {
-    return <AssignmentForm subject={selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks} onClose={() => setCreatingWork(false)} onSave={work => {
+    return <AssignmentForm subject={selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks}
+      onImport={(data, fallback) => readWorkDraft(data,selected ? [selected] : all,fallback,bank,demoWorks)}
+      onClose={() => setCreatingWork(false)} onSave={work => {
       const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
         .map(item => ({...item, subject:work.subject}));
       const activities = work.activities.map(item => item.kind === "program"
         ? {...item, taskId:item.taskId ?? item.id} : item);
-      updateLibrary(current => ({...current, tasks:[...current.tasks,...newTasks], works:[...current.works,{...work,activities}]}));
+      updateLibrary(current => {
+        if (current.works.some(w => w.id === work.id)) throw Error(`Работа с ID «${work.id}» уже существует.`);
+        return {...current, tasks:[...current.tasks,...newTasks], works:[...current.works,{...work,activities}]};
+      });
       if (catalogue) {
         if (workSubject) setWorkSubject(work.subject);
         setWorkQuery("");

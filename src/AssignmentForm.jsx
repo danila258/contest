@@ -5,6 +5,8 @@ import {DateField, DatePicker} from "@gravity-ui/date-components";
 import {academicYearOf, currentSemester} from "./semester";
 import {dateTime} from "@gravity-ui/date-utils";
 import {FormRow} from "@gravity-ui/components";
+import {readActivityDrafts} from "./importData";
+import {JsonImport} from "./JsonImport";
 import {WorkspacePage} from "./WorkspacePage";
 import {ActivityFields, newActivity} from "./AssignmentActivities";
 
@@ -57,7 +59,8 @@ export function contentError(items) {
   return "";
 }
 
-export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, onClose, onSave}) {
+export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, onImport, onClose, onSave}) {
+  const [importedId,setImportedId] = useState(null);
   const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
   const range = scheduleRange(subjects.find(s => s.id === subjectId));
   const availableTasks = bankTasks.filter(task => task.subject === subjectId);
@@ -71,6 +74,23 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
   const [submitted,setSubmitted] = useState(false);
   const opensAt = new Date(`${opens.date}T${opens.time}`);
   const dueAt = new Date(`${due.date}T${due.time}`);
+  function importDraft(data) {
+    const draft = onImport(data, subjectId);
+    function localSchedule(instant) {
+      const local = dateTime({input:instant});
+      return {date:local.format("YYYY-MM-DD"), time:local.format("HH:mm")};
+    }
+    setImportedId(draft.id);
+    setSubjectId(draft.subject);
+    setTitle(draft.title);
+    setOpens(localSchedule(draft.opensAt));
+    setDue(localSchedule(draft.dueAt));
+    setSequential(draft.sequential);
+    setReview(draft.review);
+    setItems(draft.activities);
+    setSaveError("");
+    setSubmitted(false);
+  }
   function changeSubject(id) {
     const nextRange = scheduleRange(subjects.find(s => s.id === id));
     const inRange = date => date >= nextRange.start && date <= nextRange.end;
@@ -103,11 +123,11 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
     }
     if (error) return;
     try {
-      onSave({id:crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
+      onSave({id:importedId ?? crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
       dueAt:dueAt.toISOString(), sequential, review, activities:items});
     } catch (failure) {
-      if (!(failure instanceof DOMException)) throw failure;
-      setSaveError("Браузер не смог сохранить работу. Проверьте свободное место и разрешение на хранение данных.");
+      setSaveError(failure instanceof DOMException
+        ? "Браузер не смог сохранить работу. Проверьте свободное место и разрешение на хранение данных." : failure.message);
     }
   }
   return <WorkspacePage title="Новая практическая работа" actions={<>
@@ -116,6 +136,7 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
     <Button size="xl" view="action" type="submit" extraProps={{form:"assignment-form"}}>Создать</Button>
   </>}>
     <form id="assignment-form" className="subjectForm" onSubmit={submit}>
+      <JsonImport template="works" onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>
       {subject ? <span>{subject.title}</span> : <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
           options={subjects.map(s => ({value:s.id, content:s.title}))} onUpdate={([id]) => changeSubject(id)}/>
@@ -134,6 +155,11 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
         <Checkbox checked={review} onUpdate={setReview}>Для зачёта требуется подтверждение преподавателя</Checkbox>
       </fieldset>
       <h2>Задания</h2>
+      <JsonImport template="activities" templateLabel="Шаблон заданий" importLabel="Добавить задания из JSON" onImport={data => {
+        const added = readActivityDrafts(data,subjectId);
+        setItems(previous => [...previous,...added]);
+        return added.length;
+      }}/>
       {items.map((item,index) => <fieldset className="assignmentBlock" key={item.id}>
         <legend>{index + 1}. {item.kind === "quiz" ? "Тест" : "Задача на программирование"}</legend>
         <div className="assignmentControls">
@@ -143,6 +169,13 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
             {item.kind === "quiz" ? "Удалить тест" : "Удалить задание"}
           </Button>
         </div>
+        {!item.taskId && <JsonImport template={item.kind} templateLabel={item.kind === "quiz" ? "Шаблон теста" : "Шаблон задачи"}
+          importLabel={item.kind === "quiz" ? "Заполнить тест из JSON" : "Заполнить задачу из JSON"}
+          onImport={data => {
+            const [replacement] = readActivityDrafts(data,subjectId,item.kind);
+            setItems(previous => previous.map(entry => entry.id === item.id ? replacement : entry));
+            return 1;
+          }}/>}
         {item.taskId ? <strong>{item.title}</strong> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
       <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}

@@ -1,7 +1,7 @@
 import React, {useRef, useState} from "react";
 import {Button, Dialog} from "@gravity-ui/uikit";
 
-export function JsonImport({template, onImport}) {
+export function JsonImport({template, onImport, successMessage, importLabel = "Импортировать JSON", templateLabel = "Скачать шаблон JSON"}) {
   const trigger = useRef(null);
   const input = useRef(null);
   const [message,setMessage] = useState(null);
@@ -17,7 +17,7 @@ export function JsonImport({template, onImport}) {
     try {
       const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
       const count = onImport(data);
-      setMessage(`Добавлено записей: ${count}.`);
+      setMessage(successMessage ?? `Добавлено записей: ${count}.`);
     } catch (error) {
       setFailure({file:file.name, detail:error.message});
     } finally {
@@ -26,8 +26,8 @@ export function JsonImport({template, onImport}) {
   }
   return <>
     <div className="assignmentControls">
-      <Button href={`/${template}-template.json`} extraProps={{download:`${template}-template.json`}}>Скачать шаблон JSON</Button>
-      <Button ref={trigger} loading={loading} onClick={() => input.current.click()}>Импортировать JSON</Button>
+      <Button href={`/${template}-template.json`} extraProps={{download:`${template}-template.json`}}>{templateLabel}</Button>
+      <Button ref={trigger} loading={loading} onClick={() => input.current.click()}>{importLabel}</Button>
       <input ref={input} hidden type="file" accept=".json,application/json" onChange={upload}/>
     </div>
     {message && <p role="status">{message}</p>}
