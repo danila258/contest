@@ -1,5 +1,6 @@
 import React from "react";
 import {Card, Disclosure, Label, Text} from "@gravity-ui/uikit";
+import {programModes} from "./activityData";
 import MarkdownContent from "./MarkdownContent";
 
 function Facts({rows}) {
@@ -38,13 +39,13 @@ export default function TeacherActivityPreview({item}) {
   </div>;
 
   const cases = item.cases ?? [];
-  const sources = Object.entries(item.sources ?? {}).filter(([name]) => item.mode !== "stdout" || name === "main.cpp");
+  const sources = Object.entries(item.sources ?? {}).filter(([name]) => item.mode === "unit" || name === "main.cpp");
   return <div className="teacherPreview">
     <section><Text as="h3" variant="subheader-2">Условие задачи</Text><MarkdownContent source={item.prompt}/></section>
     <Facts rows={[
       ["Время на решение",item.minutes ? `${item.minutes} мин` : "Без ограничения"],
-      ["Способ проверки",item.mode && (item.mode === "unit" ? "Unit-тесты" : "Сравнение STDOUT")],
-      ["Логи тестов для студента",item.logs == null ? null : item.logs ? "Доступны" : "Скрыты"],
+      ["Способ проверки",programModes[item.mode]],
+      ["Логи тестов для студента",item.mode === "none" || item.logs == null ? null : item.logs ? "Доступны" : "Скрыты"],
     ]}/>
     {item.checks && <section className="previewChecks">
       <Text as="h3" variant="subheader-2">Проверки кода</Text>

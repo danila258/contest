@@ -1,5 +1,5 @@
 {
-  "_comment": "For AI agents: Supply one program in activities to fill a programming task editor. Set title and Markdown prompt. mode=stdout uses main.cpp and input/output cases; mode=unit supports main.cpp, task_name.cpp, task_name.h and cases with code. reference contains literal C++, minutes is a positive solving limit or an empty string, logs is boolean, and each check is off, warn or block.",
+  "_comment": "For AI agents: Supply one program in activities to fill a programming task editor. Set title and Markdown prompt. mode=stdout uses main.cpp and input/output cases; mode=unit supports main.cpp, task_name.cpp, task_name.h and cases with code. reference contains literal C++, minutes is a positive solving limit or an empty string, logs is boolean, and each check is off, warn or block. Defaults: logs=false, format=block, static=warn, dynamic=warn. Use mode=none for a program without tests; omit cases or use an empty array.",
   "activities": [
     {
       "kind": "program",
@@ -19,9 +19,9 @@
       "minutes": "",
       "logs": false,
       "checks": {
-        "format": "off",
+        "format": "block",
         "static": "warn",
-        "dynamic": "block"
+        "dynamic": "warn"
       }
     }
   ]

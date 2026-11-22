@@ -1,6 +1,7 @@
 import {z} from "zod";
 import {ru} from "zod/locales";
 import {academicYearOf, academicYearOptions, currentSemester, validAcademicYear} from "./semester.js";
+import {defaultChecks, programModes, savedActivity} from "./activityData.js";
 import {starter} from "./data.js";
 import {colors, iconNames, demoGroup, demoTeacher, groups, teachers} from "./subjectOptions.js";
 
@@ -51,19 +52,23 @@ export function readSubjects(data, existing) {
   });
 }
 
-const severity = z.enum(["off","warn","block"]).default("off");
+const severity = z.enum(["off","warn","block"]);
 const stdoutCase = object({input:text,output:text});
 const unitCase = object({code:nonblank});
 const programFields = {
-  title, prompt:nonblank, mode:z.enum(["stdout","unit"]).default("stdout"),
+  title, prompt:nonblank, mode:z.enum(Object.keys(programModes)).default("stdout"),
   sources:object({"main.cpp":text.default(starter),"task_name.cpp":text.optional(),"task_name.h":text.optional()}).prefault({}),
-  cases:z.array(z.union([stdoutCase,unitCase])).min(1).optional(),
+  cases:z.array(z.union([stdoutCase,unitCase])).optional(),
   reference:text.default(""), minutes:z.union([minutes,z.literal("")]).default(""), logs:flag,
-  checks:object({format:severity,static:severity,dynamic:severity}).prefault({}),
+  checks:object({format:severity.default(defaultChecks.format),static:severity.default(defaultChecks.static),dynamic:severity.default(defaultChecks.dynamic)}).prefault({}),
 };
 
 function program(row, subject, path) {
   const cases = row.cases ?? (row.mode === "stdout" ? [{input:"",output:""}] : []);
+  if (row.mode === "none") {
+    if (cases.length) throw Error(`${path}.cases — для режима «Без тестов» оставьте список пустым.`);
+    return savedActivity({...row, id:row.id ?? newId(), kind:"program", subject});
+  }
   if (!cases.length || cases.some(c => row.mode === "unit" ? !("code" in c) : !("output" in c))) {
     throw Error(`${path}.cases — проверки должны соответствовать режиму ${row.mode}.`);
   }
@@ -135,7 +140,7 @@ export function readActivityDrafts(data, subject, kind) {
 }
 
 const workSchema = object({id:key, subject:id.optional(), title, opensAt:localDate, dueAt:localDate,
-  sequential:flag, review:flag, activities:z.array(z.union([inlineActivity,object({taskId:id})])).default([])});
+  sequential:z.boolean().default(true), review:z.boolean().default(true), activities:z.array(z.union([inlineActivity,object({taskId:id})])).default([])});
 
 export function readWorks(data, subjects, fallback, current, demoWorks) {
   const rows = parse(object({_comment:text.optional(),works:z.array(workSchema).min(1)}),data).works;

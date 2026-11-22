@@ -1,3 +1,4 @@
+import {savedActivity} from "./activityData";
 import {JsonImport} from "./JsonImport";
 import {readBank} from "./importData";
 import {SubjectFilter} from "./SubjectFilter";
@@ -34,7 +35,7 @@ function BankEditor({initial, subjects, tasks, onClose, onSave}) {
     event.preventDefault();
     const problem = item.kind !== "theory" ? contentError([item]) : !item.prompt.trim() && "Введите теоретический вопрос.";
     if (problem || !item.title.trim()) return setError(problem || "Введите название.");
-    try { onSave({...item,title:item.title.trim()}); }
+    try { onSave(savedActivity({...item,title:item.title.trim()})); }
     catch { setError("Не удалось сохранить изменения в этом браузере."); }
   }
   return <WorkspacePage title={item.kind === "quiz" ? (initial.existing ? "Редактирование теста" : "Новый тест") : isTask ? "Задача банка" : "Теоретический вопрос"} actions={<>

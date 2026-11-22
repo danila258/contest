@@ -1,7 +1,7 @@
 import React, {lazy, Suspense, useId, useState} from "react";
 import {Button, Checkbox, Select, TextArea, TextInput} from "@gravity-ui/uikit";
 import {FormRow} from "@gravity-ui/components";
-import {files, answer, testCase, question} from "./activityData";
+import {files, programModes, answer, testCase, question} from "./activityData";
 
 const MarkdownField = lazy(() => import("./MarkdownField"));
 const CodeEditor = lazy(() => import("./CodeEditor"));
@@ -16,10 +16,10 @@ export function Input({label, value, onUpdate, required = true, type = "text", p
       controlProps={{required, ...limits}} placeholder={placeholder}/>
   </FormRow>;
 }
-function Choice({label, value, options, onUpdate}) {
+function Choice({label, value, options, onUpdate, direction = "column"}) {
   const fieldId = useId();
-  return <FormRow direction="column" label={label} fieldId={fieldId}>
-    <Select id={fieldId} aria-label={label} size="l" value={[value]}
+  return <FormRow direction={direction} label={label} fieldId={fieldId}>
+    <Select id={fieldId} aria-label={label} size="l" width={direction === "row" ? "max" : undefined} value={[value]}
       options={options.map(([value, content]) => ({value, content}))} onUpdate={v => onUpdate(v[0])}/>
   </FormRow>;
 }
@@ -63,28 +63,45 @@ function Quiz({item, update}) {
 function Program({item, update}) {
   const [file, setFile] = useState(files[0]);
   return <>
+    <Input label="Лимит времени на решение, мин" type="number" required={false} min="1" placeholder="Без ограничения" value={item.minutes} onUpdate={minutes => update({minutes})}/>
     <MarkdownField label="Условие задачи" placeholder="Опишите задачу, формат входных данных и ожидаемый результат" value={item.prompt} onChange={prompt => update({prompt})}/>
-    <Choice label="Способ проверки" value={item.mode} options={[["stdout","Сравнение STDOUT"],["unit","Unit-тесты"]]} onUpdate={mode => {setFile(files[0]); update({mode});}}/>
     <fieldset className="assignmentBlock"><legend>Начальный код</legend>
       {item.mode === "unit" ? <Choice label="Файл" value={file} options={files.map(f => [f,f])} onUpdate={setFile}/> : <span>main.cpp</span>}
       <CodeEditor key={file} filename={file} initialValue={item.sources[file] ?? ""} onChange={code => update({sources:{...item.sources,[file]:code}})}/>
     </fieldset>
-    {item.cases.map((c,i) => <fieldset className="assignmentBlock" key={c.id}><legend>Проверочный тест {i+1}</legend>
-      {item.mode === "unit" ? <CodeEditor filename="Проверочный тест" initialValue={c.code} onChange={code => update({cases:replace(item.cases,c.id,{code})})}/> :
-        ["input","output"].map(key => <label key={key}>{key === "input" ? "Входные данные" : "Ожидаемый вывод"}
-          <TextArea value={c[key]} onUpdate={value => update({cases:replace(item.cases,c.id,{[key]:value})})}/></label>)}
-      <Button disabled={item.cases.length === 1} onClick={() => update({cases:item.cases.filter(v => v.id !== c.id)})}>Удалить проверочный тест</Button>
-    </fieldset>)}
-    <Button onClick={() => update({cases:[...item.cases,testCase()]})}>Добавить проверочный тест</Button>
-    <label>Эталонное решение (C++) <input type="file" accept=".cpp,.cc,.cxx" onChange={async e => {
-      const file = e.target.files[0];
-      if (file) update({reference:await file.text()});
-    }}/></label>
-    <Input label="Лимит времени на решение, мин" type="number" required={false} min="1" placeholder="Без ограничения" value={item.minutes} onUpdate={minutes => update({minutes})}/>
-    {Object.entries(checks).map(([key,label]) => <Choice key={key} label={label} value={item.checks[key]}
-      options={[["off","Отключено"],["warn","Замечание"],["block","Блокирует зачёт"]]}
-      onUpdate={value => update({checks:{...item.checks,[key]:value}})}/>)}
-    <Toggle label="Показывать студенту логи тестов" checked={item.logs} onUpdate={logs => update({logs})}/>
+    <div className="programSettings">
+      <fieldset className="assignmentBlock"><legend>Способ проверки</legend>
+        <Select aria-label="Способ проверки" size="l" value={[item.mode]}
+          options={Object.entries(programModes).map(([value,content]) => ({value,content}))}
+          onUpdate={([mode]) => {
+            setFile(files[0]);
+            update({mode, cases:mode !== "none" && !item.cases.length ? [testCase()] : item.cases});
+          }}/>
+        {item.mode !== "none" && <Toggle label="Показывать студенту логи тестов" checked={item.logs} onUpdate={logs => update({logs})}/>}
+      </fieldset>
+      {item.mode !== "none" && <div className="programTests">
+        {item.cases.map((c,i) => <fieldset className="assignmentBlock" key={c.id}><legend>Проверочный тест {i+1}</legend>
+          {item.mode === "unit" ? <CodeEditor filename="Проверочный тест" initialValue={c.code} onChange={code => update({cases:replace(item.cases,c.id,{code})})}/> :
+            <div className="assignmentPair">{["input","output"].map(key => <label className="programTestField" key={key}>{key === "input" ? "Входные данные" : "Ожидаемый вывод"}
+              <TextArea value={c[key]} onUpdate={value => update({cases:replace(item.cases,c.id,{[key]:value})})}/></label>)}</div>}
+          <Button disabled={item.cases.length === 1} onClick={() => update({cases:item.cases.filter(v => v.id !== c.id)})}>Удалить проверочный тест</Button>
+        </fieldset>)}
+        <div className="assignmentControls">
+          <Button onClick={() => update({cases:[...item.cases,testCase()]})}>Добавить проверочный тест</Button>
+        </div>
+      </div>}
+      <fieldset className="assignmentBlock"><legend>Эталонное решение</legend>
+        <input aria-label="Эталонное решение" type="file" accept=".cpp,.cc,.cxx" onChange={async e => {
+          const file = e.target.files[0];
+          if (file) update({reference:await file.text()});
+        }}/>
+      </fieldset>
+      <fieldset className="assignmentBlock programChecks"><legend>Проверки кода</legend>
+        {Object.entries(checks).map(([key,label]) => <Choice key={key} direction="row" label={label} value={item.checks[key]}
+          options={[["off","Отключено"],["warn","Замечание"],["block","Блокирует зачёт"]]}
+          onUpdate={value => update({checks:{...item.checks,[key]:value}})}/>)}
+      </fieldset>
+    </div>
   </>;
 }
 

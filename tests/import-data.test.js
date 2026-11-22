@@ -197,3 +197,39 @@ test("activity import appends editable quizzes and tasks in file order using fre
   data.activities[1].cases = [{code:"invalid for stdout"}];
   assert.throws(() => readActivityDrafts(data,"cpp"), /activities\.1\.cases/);
 });
+
+test("programs without tests accept omitted or empty cases and reject supplied tests", () => {
+  const task = {title:"Практика", prompt:"Напишите программу", mode:"none"};
+  const bank = readBank({tasks:[task]},subjects,"cpp",library());
+  assert.deepEqual(bank.tasks[0].cases, []);
+  const [item] = readActivityDrafts({activities:[{kind:"program",...task,cases:[]}]},"cpp");
+  assert.equal(item.mode,"none");
+  assert.deepEqual(item.cases,[]);
+  for (const [mode,cases] of [["none",[{input:"",output:""}]],["unit",[]],["stdout",[]]]) {
+    assert.throws(() => readBank({tasks:[{...task,mode,cases}]},subjects,"cpp",library()),/tasks\.0\.cases/);
+  }
+});
+
+test("new work and program defaults respect explicit overrides", () => {
+  const checks = {format:"block",static:"warn",dynamic:"warn"};
+  const created = newActivity("program");
+  assert.deepEqual(created.checks,checks);
+  assert.equal(created.logs,false);
+  const [row] = template("works").works;
+  const program = {kind:"program",title:"Задача",prompt:"Условие"};
+  delete row.sequential;
+  delete row.review;
+  row.activities = [program];
+  const [work] = readWork(row).works;
+  assert.equal(work.sequential,true);
+  assert.equal(work.review,true);
+  assert.deepEqual(work.activities[0].checks,checks);
+  assert.equal(work.activities[0].logs,false);
+  program.checks = {format:"off"};
+  program.logs = true;
+  const [override] = readWork({...row,sequential:false,review:false}).works;
+  assert.equal(override.sequential,false);
+  assert.equal(override.review,false);
+  assert.deepEqual(override.activities[0].checks,{...checks,format:"off"});
+  assert.equal(override.activities[0].logs,true);
+});

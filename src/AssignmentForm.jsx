@@ -6,6 +6,7 @@ import {academicYearOf, currentSemester} from "./semester";
 import {dateTime} from "@gravity-ui/date-utils";
 import {FormRow} from "@gravity-ui/components";
 import {readActivityDrafts} from "./importData";
+import {savedActivity} from "./activityData";
 import {JsonImport} from "./JsonImport";
 import {WorkspacePage} from "./WorkspacePage";
 import TeacherActivityPreview from "./TeacherActivityPreview";
@@ -73,8 +74,8 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
   const [title,setTitle] = useState(initialWork?.title ?? "");
   const [opens,setOpens] = useState(() => initialWork ? localSchedule(initialWork.opensAt) : {date:openingDate(range), time:"00:01"});
   const [due,setDue] = useState(() => initialWork ? localSchedule(initialWork.dueAt) : {date:"", time:"23:59"});
-  const [sequential,setSequential] = useState(initialWork?.sequential ?? false);
-  const [review,setReview] = useState(initialWork?.review ?? false);
+  const [sequential,setSequential] = useState(initialWork ? Boolean(initialWork.sequential) : true);
+  const [review,setReview] = useState(initialWork ? Boolean(initialWork.review) : true);
   const [items,setItems] = useState(initialWork?.activities ?? []);
   const [saveError,setSaveError] = useState("");
   const [submitted,setSubmitted] = useState(false);
@@ -126,7 +127,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
     if (error) return;
     try {
       onSave({id:initialWork?.id ?? importedId ?? crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
-      dueAt:dueAt.toISOString(), sequential, review, activities:items});
+      dueAt:dueAt.toISOString(), sequential, review, activities:items.map(savedActivity)});
     } catch (failure) {
       setSaveError(failure instanceof DOMException
         ? "Браузер не смог сохранить работу. Проверьте свободное место и разрешение на хранение данных." : failure.message);
@@ -157,7 +158,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
         <Checkbox checked={review} onUpdate={setReview}>Для зачёта требуется подтверждение преподавателя</Checkbox>
       </fieldset>
       <h2>Задания</h2>
-      <JsonImport template="activities" templateLabel="Шаблон заданий" importLabel="Добавить задания из JSON" onImport={data => {
+      <JsonImport template="activities" importLabel="Добавить задания из JSON" onImport={data => {
         const added = readActivityDrafts(data,subjectId);
         setItems(previous => [...previous,...added]);
         return added.length;
@@ -171,7 +172,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
             {item.kind === "quiz" ? "Удалить тест" : "Удалить задание"}
           </Button>
         </div>
-        {!item.taskId && <JsonImport template={item.kind} templateLabel={item.kind === "quiz" ? "Шаблон теста" : "Шаблон задачи"}
+        {!item.taskId && <JsonImport template={item.kind}
           importLabel={item.kind === "quiz" ? "Заполнить тест из JSON" : "Заполнить задачу из JSON"}
           onImport={data => {
             const [replacement] = readActivityDrafts(data,subjectId,item.kind);

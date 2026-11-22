@@ -1,5 +1,5 @@
 {
-  "_comment": "For AI agents: Append an ordered array of quizzes and programming tasks to the current assignment draft. Use the same inline quiz and program fields as works-template.json. The current subject is used automatically and ids are generated. No assignment title, dates or bank task IDs are required.",
+  "_comment": "For AI agents: Append an ordered array of quizzes and programming tasks to the current assignment draft. Use the same inline quiz and program fields as works-template.json. The current subject is used automatically and ids are generated. No assignment title, dates or bank task IDs are required. Defaults: logs=false, format=block, static=warn, dynamic=warn. Use mode=none for a program without tests; omit cases or use an empty array.",
   "activities": [
     {
       "kind": "quiz",
@@ -45,9 +45,9 @@
       "minutes": "",
       "logs": false,
       "checks": {
-        "format": "off",
+        "format": "block",
         "static": "warn",
-        "dynamic": "block"
+        "dynamic": "warn"
       }
     }
   ]

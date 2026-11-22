@@ -4,7 +4,6 @@ import { createRoot } from "react-dom/client";
 import {
   Button,
   Card,
-  Checkbox,
   Label,
   Table,
   Text,
@@ -155,7 +154,6 @@ function App() {
       });
     } catch (error) { setEditFailure({id:active.id, message:error.message}); }
   }
-  const [includeClosed, setIncludeClosed] = useState(false);
   const [workSubject,setWorkSubject] = useState("");
   const [subjectQuery, setSubjectQuery] = useState("");
   const [subjectYear, setSubjectYear] = useState("");
@@ -200,7 +198,6 @@ function App() {
   const overview = page === "Обзор";
   const visibleWorks = works.filter(w => {
     if (!subject(w.subject)) return false;
-    if (teacher && catalogue && includeClosed && w.activities) return true;
     const opened = !w.opensAt || Date.parse(w.opensAt) <= now;
     return opened && ((!teacher && !overview) || deadlineOf(w) > now);
   });
@@ -507,7 +504,6 @@ function App() {
       <h1>Практические работы</h1>
       <div className="assignmentControls">
         <SubjectFilter subjects={all} value={workSubject} onChange={setWorkSubject}/>
-        {teacher && <Checkbox checked={includeClosed} onUpdate={setIncludeClosed}>Включая будущие и завершённые работы</Checkbox>}
         {!teacher && filters}
         {teacher && <Button view="action" disabled={!all.length} onClick={() => setCreatingWork(true)}>
           Создать практическую работу

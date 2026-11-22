@@ -343,6 +343,20 @@ h2 {
 .semesterFields .gc-form-row { margin: 0; }
 
 .subjectForm .assignmentBlock { display: grid; gap: 16px; }
+.programSettings, .programTests, .programTestField { display: grid; grid-template-columns: minmax(0, 1fr); }
+.programSettings { gap: var(--g-spacing-6); }
+.programTests { gap: var(--g-spacing-4); }
+.programTestField { gap: var(--g-spacing-2); }
+.subjectForm .programChecks { gap: var(--g-spacing-3); }
+.programChecks .gc-form-row {
+  --gc-form-row-label-width: 46%;
+  align-items: center;
+}
+.programChecks .gc-form-row + .gc-form-row {
+  border-block-start: 1px solid var(--g-color-line-generic);
+  padding-block-start: var(--g-spacing-3);
+}
+.programSettings input[type="file"] { max-width: 100%; }
 .assignmentBlock > .g-button { justify-self: start; }
 .assignmentPair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .subjectForm .scheduleField { display: grid; grid-template-columns: minmax(0, 1fr) 5.5rem; }
