@@ -45,10 +45,13 @@ function Quiz({item, update}) {
     {item.questions.map((q, i) => <fieldset className="assignmentBlock" key={q.id}><legend>Вопрос {i + 1}</legend>
       <MarkdownField label="Условие вопроса" placeholder="Какой результат вернёт эта функция?" value={q.prompt} onChange={prompt => change(q, {prompt})}/>
       {item.timer === "question" && <Input label="Время на вопрос, мин" type="number" min="1" value={q.minutes} onUpdate={minutes => change(q,{minutes})}/>}
-      {q.answers.map((a, j) => <div className="assignmentControls" key={a.id}>
+      {q.answers.map((a, j) => <div className="quizAnswer" key={a.id} role="group" aria-label={`Вариант ${j + 1}`}>
         <Input label={`Вариант ${j + 1}`} value={a.text} onUpdate={text => change(q,{answers: replace(q.answers,a.id,{text})})}/>
-        <Toggle label="Правильный" checked={a.correct} onUpdate={correct => change(q,{answers: replace(q.answers,a.id,{correct})})}/>
-        <Button disabled={q.answers.length === 1} onClick={() => change(q,{answers:q.answers.filter(v => v.id !== a.id)})}>Удалить вариант</Button>
+        <div className="quizAnswerActions">
+          <Toggle label="Правильный ответ" checked={a.correct} onUpdate={correct => change(q,{answers: replace(q.answers,a.id,{correct})})}/>
+          <Button view="flat-secondary" aria-label={`Удалить вариант ${j + 1}`} disabled={q.answers.length === 1}
+            onClick={() => change(q,{answers:q.answers.filter(v => v.id !== a.id)})}>Удалить</Button>
+        </div>
       </div>)}
       <div className="assignmentControls"><Button onClick={() => change(q,{answers:[...q.answers,answer()]})}>Добавить вариант</Button>
       <Button disabled={item.questions.length === 1} onClick={() => update({questions:item.questions.filter(v => v.id !== q.id)})}>Удалить вопрос</Button></div>

@@ -139,7 +139,9 @@ export function AssignmentForm({subject, subjects, initialSubjectId, bankTasks, 
         <div className="assignmentControls">
           <Button disabled={!index} onClick={() => move(index,-1)}>Выше</Button>
           <Button disabled={index === items.length-1} onClick={() => move(index,1)}>Ниже</Button>
-          <Button onClick={() => setItems(items.filter(i => i.id !== item.id))}>Удалить задание</Button>
+          <Button onClick={() => setItems(items.filter(i => i.id !== item.id))}>
+            {item.kind === "quiz" ? "Удалить тест" : "Удалить задание"}
+          </Button>
         </div>
         {item.taskId ? <strong>{item.title}</strong> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
