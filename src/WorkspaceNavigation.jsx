@@ -35,7 +35,7 @@ export function WorkspaceNavigation({ page, go, teacher, children }) {
       description={teacher ? "Преподаватель" : "Студент · ИВТ-24"}
     />
   );
-  const logo = { text: "Контест", icon: Code, onClick: () => go("Обзор") };
+  const logo = { text: "Контест", textSize: 20, icon: Code, onClick: () => go("Обзор") };
   if (mobile)
     return (
       <MobileHeader
