@@ -17,9 +17,19 @@
 }
 .appearancePanel { display: grid; gap: 12px; padding: 16px; }
 .appearanceButton { margin-inline-start: auto; }
+/* Share the last row with AsideHeader's collapse control. */
+.profile ~ [data-gn-collapse-fallback] {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  pointer-events: none;
+}
 .profile {
+  min-width: 0;
   overflow: hidden;
-  padding-block: var(--g-spacing-2);
+}
+.profile:not(.profileCompact) {
+  padding-inline-end: var(--g-spacing-6);
 }
 .profile .g-user__avatar {
   flex: 0 0 var(--g-spacing-10);
