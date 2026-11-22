@@ -42,6 +42,7 @@ import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
 import { WorkspacePage } from "./WorkspacePage";
 import {demoGroup, demoTeacher} from "./subjectOptions";
+import {bankIdOf, copySubjectLibrary, referenceWorkTasks, resolveWorkTasks} from "./subjectCopy";
 import { SubjectSettings } from "./SubjectSettings";
 
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
@@ -52,7 +53,7 @@ import TeacherActivityPreview from "./TeacherActivityPreview";
 const subjects = [...demoSubjects,...imported.subjects];
 
 function withImportedData(local) {
-  const merged = {};
+  const merged = {...local};
   for (const key of ["tasks","questions","works"]) {
     const ids = new Set(local[key].map(row => row.id));
     merged[key] = [...imported[key].filter(row => !ids.has(row.id)),...local[key]];
@@ -120,7 +121,7 @@ function App() {
     const stored = localStorage.getItem("practice.library");
     saveLibrary(change(stored ? withImportedData(JSON.parse(stored)) : bank));
   }
-  const savedWorks = bank.works;
+  const savedWorks = React.useMemo(() => bank.works.map(w => resolveWorkTasks(w,bank.tasks,starts[w.id])), [bank,starts]);
   const bankTasks = bank.tasks;
   const [creatingWork, setCreatingWork] = useState(false);
   const releaseEditor = React.useRef(null);
@@ -172,7 +173,8 @@ function App() {
   const teacher = role === "Преподаватель";
   // Old demo records were visible to both profiles before access settings existed.
   const savedIds = new Set(extra.map((s) => s.id));
-  const all = [...subjects.filter((s) => !savedIds.has(s.id)), ...extra].filter(
+  const baseSubjects = [...subjects,...(bank.copiedSubjects ?? [])];
+  const all = [...baseSubjects.filter(s => !savedIds.has(s.id)), ...extra].filter(
     (s) =>
       teacher
         ? s.teacher === demoTeacher ||
@@ -243,6 +245,13 @@ function App() {
     });
   }
   function saveSubject(settings) {
+    if (settingsOpen === "copy") {
+      const copy = {...settings,id:crypto.randomUUID(),teacher:demoTeacher,bankId:bankIdOf(selected)};
+      updateLibrary(current => copySubjectLibrary(current,selected,copy,datedDemoWorks));
+      showSettings(false);
+      go("Предметы",copy);
+      return;
+    }
     const base = selected ?? {
       id: crypto.randomUUID(),
       teacher: demoTeacher,
@@ -259,18 +268,20 @@ function App() {
       onImport={(data, fallback) => readWorkDraft(data,selected ? [selected] : all,fallback,bank,demoWorks)}
       onClose={closeForm} onSave={work => {
       if (active && workHasStarted(active)) throw new Error(alreadyStarted);
+      const workBankId = bankIdOf(all.find(s => s.id === work.subject));
       const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
-        .map(item => ({...item, subject:work.subject}));
+        .map(item => ({...item, subject:workBankId}));
       const activities = work.activities.map(item => item.kind === "program"
         ? {...item, taskId:item.taskId ?? item.id} : item);
       const saved = {...active,...work,activities};
       updateLibrary(current => {
         const existing = current.works.find(w => w.id === work.id);
-        if (active && JSON.stringify(existing) !== JSON.stringify(active)) {
+        if (active && JSON.stringify(resolveWorkTasks(existing,current.tasks)) !== JSON.stringify(active)) {
           throw Error("Работа изменилась в другой вкладке. Обновите страницу и снова откройте работу для редактирования.");
         }
         if (!active && existing) throw Error(`Работа с ID «${work.id}» уже существует.`);
-        return {...current, tasks:[...current.tasks,...newTasks], works:active ? current.works.map(w => w.id === work.id ? saved : w) : [...current.works,saved]};
+        const record = workBankId === work.subject ? saved : referenceWorkTasks(saved);
+        return {...current, tasks:[...current.tasks,...newTasks], works:active ? current.works.map(w => w.id === work.id ? record : w) : [...current.works,record]};
       });
       if (active) open(saved);
       if (!active && catalogue) {
@@ -288,12 +299,16 @@ function App() {
       busy={busy} onStart={() => withWorkAccess(active.id, () => navigator.locks.request("practice.starts", () => {
         const time = Date.now();
         setNow(time);
-        const latest = JSON.parse(localStorage.getItem("practice.library"))?.works.find(w => w.id === active.id);
-        if (latest && JSON.stringify(latest) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
+        const storedLibrary = JSON.parse(localStorage.getItem("practice.library"));
+        const latest = storedLibrary?.works.find(w => w.id === active.id);
+        if (latest && JSON.stringify(resolveWorkTasks(latest,withImportedData(storedLibrary).tasks)) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
         if (time < Date.parse(active.opensAt)) throw new Error("Время открытия работы ещё не наступило.");
         if (time >= deadlineOf(active) || active.activities?.length === 0) return;
         const saved = JSON.parse(localStorage.getItem("practice.starts")) ?? starts;
-        saveStarts({...saved,[active.id]:saved[active.id] ?? new Date(time).toISOString()});
+        const startedAt = new Date(time).toISOString();
+        const start = latest?.activities?.some(item => item.taskId && !item.kind)
+          ? {startedAt,activities:active.activities} : startedAt;
+        saveStarts({...saved,[active.id]:saved[active.id] ?? start});
       }))}/>;
   }
   if (active?.activities) {
@@ -305,6 +320,7 @@ function App() {
     return (
       <SubjectSettings
         subject={selected}
+        copying={settingsOpen === "copy"}
         onSave={saveSubject}
         onClose={() => showSettings(false)}
       />
@@ -515,7 +531,8 @@ function App() {
         updateLibrary(current => {
           const added = readWorks(data,all,workSubject,current,demoWorks);
           count = added.works.length;
-          return {...current, works:[...current.works,...added.works], tasks:[...current.tasks,...added.tasks]};
+          const records = added.works.map(w => bankIdOf(subject(w.subject)) === w.subject ? w : referenceWorkTasks(w));
+          return {...current, works:[...current.works,...records], tasks:[...current.tasks,...added.tasks]};
         });
         setNow(Date.now());
         return count;
@@ -546,7 +563,7 @@ function App() {
         value={subjectQuery} onUpdate={setSubjectQuery} hasClear/>
       {teacher && <JsonImport key="subjects" template="subjects" onImport={data => {
         const stored = JSON.parse(localStorage.getItem("practice.subjects")) ?? extra;
-        const added = readSubjects(data,[...subjects,...stored]);
+        const added = readSubjects(data,[...baseSubjects,...stored]);
         saveExtra([...stored,...added]);
         return added.length;
       }}/>}
@@ -571,7 +588,10 @@ function App() {
                       : "Задания по всем предметам."}
               </p>
             </div>
-            {selected && subjectAction}
+            {selected && teacher && <div className="assignmentControls">
+              <Button view="outlined" onClick={() => showSettings("copy")}>Копировать предмет</Button>
+              {subjectAction}
+            </div>}
           </div>
           {!selected && (
             <section>

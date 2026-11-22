@@ -6,6 +6,7 @@ import {dateTime} from "@gravity-ui/date-utils";
 import {FormRow} from "@gravity-ui/components";
 import {readActivityDrafts} from "./importData";
 import {savedActivity} from "./activityData";
+import {bankIdOf, subjectOptionTitle} from "./subjectCopy";
 import {JsonImport} from "./JsonImport";
 import {WorkspacePage} from "./WorkspacePage";
 import TeacherActivityPreview from "./TeacherActivityPreview";
@@ -68,8 +69,9 @@ function localSchedule(instant) {
 export function AssignmentForm({initialWork, subject, subjects, initialSubjectId, bankTasks, onImport, onClose, onSave}) {
   const [importedId,setImportedId] = useState(null);
   const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
-  const range = scheduleRange(subjects.find(s => s.id === subjectId));
-  const availableTasks = bankTasks.filter(task => task.subject === subjectId);
+  const chosenSubject = subjects.find(s => s.id === subjectId);
+  const range = scheduleRange(chosenSubject);
+  const availableTasks = bankTasks.filter(task => task.subject === bankIdOf(chosenSubject));
   const [title,setTitle] = useState(initialWork?.title ?? "");
   const [opens,setOpens] = useState(() => initialWork ? localSchedule(initialWork.opensAt) : {date:openingDate(range), time:"00:01"});
   const [due,setDue] = useState(() => initialWork ? localSchedule(initialWork.dueAt) : {date:"", time:"23:59"});
@@ -141,7 +143,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
       {!initialWork && <JsonImport template="works" onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>}
       {subject ? <span>{subject.title}</span> : <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
-          options={subjects.map(s => ({value:s.id, content:s.title}))} onUpdate={([id]) => changeSubject(id)}/>
+          options={subjects.map(s => ({value:s.id, content:subjectOptionTitle(s,subjects)}))} onUpdate={([id]) => changeSubject(id)}/>
         {items.some(item => item.taskId) && <span>Чтобы сменить предмет, отсоедините задачи из его банка.</span>}
       </fieldset>}
       <FormRow className="subjectTitleRow" direction="column" label="Название работы" fieldId="assignment-title" required>

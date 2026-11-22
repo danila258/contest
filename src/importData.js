@@ -2,6 +2,7 @@ import {z} from "zod";
 import {ru} from "zod/locales";
 import {academicYearOf, academicYearOptions, currentSemester, validAcademicYear} from "./semester.js";
 import {defaultChecks, programModes, savedActivity} from "./activityData.js";
+import {bankIdOf} from "./subjectCopy.js";
 import {starter} from "./data.js";
 import {colors, iconNames, demoGroup, demoTeacher, groups, teachers} from "./subjectOptions.js";
 
@@ -94,13 +95,13 @@ export function readBank(data, subjects, fallback, current) {
   const tasks = rows.tasks.map((row,i) => {
     const path = `tasks.${i}`;
     uniqueId(ids,row.id,path + ".id");
-    return program(row,resolveSubject(row,fallback,subjects,path).id,path);
+    return program(row,bankIdOf(resolveSubject(row,fallback,subjects,path)),path);
   });
   const allTasks = [...current.tasks,...tasks];
   const questionIds = new Set(current.questions.map(q => q.id));
   const questions = rows.questions.map((q,i) => {
     const path = `questions.${i}`;
-    const subject = resolveSubject(q,fallback,subjects,path).id;
+    const subject = bankIdOf(resolveSubject(q,fallback,subjects,path));
     uniqueId(questionIds,q.id,path + ".id");
     for (const taskId of q.taskIds) linkedTask(allTasks,taskId,subject,path + ".taskIds");
     return {...q, subject, kind:"theory", taskIds:[...new Set(q.taskIds)]};
@@ -159,10 +160,10 @@ export function readWorks(data, subjects, fallback, current, demoWorks) {
       const itemPath = path + ".activities." + j;
       if ("taskId" in activity) {
         uniqueId(attached,activity.taskId,itemPath + ".taskId");
-        const task = linkedTask(current.tasks,activity.taskId,subject.id,itemPath);
+        const task = linkedTask(current.tasks,activity.taskId,bankIdOf(subject),itemPath);
         return {...task,id:newId(),taskId:task.id};
       }
-      const item = editableActivity(activity,subject.id,itemPath);
+      const item = editableActivity(activity,bankIdOf(subject),itemPath);
       if (item.kind === "quiz") return item;
       tasks.push(item);
       return {...item,taskId:item.id};

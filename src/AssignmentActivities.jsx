@@ -40,8 +40,13 @@ function Quiz({item, update}) {
     </div>
     <Toggle label="Перемешивать варианты ответа" checked={item.shuffle} onUpdate={shuffle => update({shuffle})}/>
     <Toggle label="Разрешить возвращаться к предыдущим вопросам" checked={item.back} onUpdate={back => update({back, timer: back ? "whole" : item.timer})}/>
-    {!item.back && <Choice label="Таймер" value={item.timer} options={[[ "whole","На весь тест"],["question","На каждый вопрос"]]} onUpdate={timer => update({timer})}/>}
-    {item.timer === "whole" && <Input label="Время на тест, мин" type="number" min="1" value={item.minutes} onUpdate={minutes => update({minutes})}/>}
+    <fieldset className="assignmentBlock">
+      <legend>Таймер</legend>
+      <div className={!item.back && item.timer === "whole" ? "assignmentPair" : undefined}>
+        {!item.back && <Choice label="Режим" value={item.timer} options={[["whole","На весь тест"],["question","На каждый вопрос"]]} onUpdate={timer => update({timer})}/>}
+        {item.timer === "whole" && <Input label="Время на тест, мин" type="number" min="1" value={item.minutes} onUpdate={minutes => update({minutes})}/>}
+      </div>
+    </fieldset>
     {item.questions.map((q, i) => <fieldset className="assignmentBlock" key={q.id}><legend>Вопрос {i + 1}</legend>
       <MarkdownField label="Условие вопроса" placeholder="Какой результат вернёт эта функция?" value={q.prompt} onChange={prompt => change(q, {prompt})}/>
       {item.timer === "question" && <Input label="Время на вопрос, мин" type="number" min="1" value={q.minutes} onUpdate={minutes => change(q,{minutes})}/>}

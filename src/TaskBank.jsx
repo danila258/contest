@@ -1,4 +1,5 @@
 import {savedActivity} from "./activityData";
+import {bankIdOf, subjectOptionTitle} from "./subjectCopy";
 import {JsonImport} from "./JsonImport";
 import {readBank} from "./importData";
 import {SubjectFilter} from "./SubjectFilter";
@@ -45,7 +46,7 @@ function BankEditor({initial, subjects, tasks, onClose, onSave}) {
   </>}>
     <form className="subjectForm" id="bank-editor" onSubmit={submit}>
       <fieldset><legend>Предмет</legend>
-        <Select aria-label="Предмет материала" disabled={initial.existing} filterable value={[item.subject]} options={options(subjects)}
+        <Select aria-label="Предмет материала" disabled={initial.existing} filterable value={[item.subject]} options={subjects.map(s => ({value:s.id,content:subjectOptionTitle(s,subjects)}))}
           onUpdate={([subject]) => update({subject,taskIds:[]})}/>
       </fieldset>
       {item.kind !== "theory" ? <ActivityFields item={item} update={update}/> : <>
@@ -57,7 +58,7 @@ function BankEditor({initial, subjects, tasks, onClose, onSave}) {
       </>}
       {!isTask && <fieldset><legend>Связанные задачи</legend>
           <Select aria-label="Связанные задачи" multiple filterable placeholder="Весь предмет" value={item.taskIds}
-            options={options(tasks.filter(t => t.subject === item.subject))} onUpdate={taskIds => update({taskIds})}/>
+            options={options(tasks.filter(t => t.subject === bankIdOf(subjects.find(s => s.id === item.subject))))} onUpdate={taskIds => update({taskIds})}/>
         </fieldset>}
     </form>
   </WorkspacePage>;
@@ -69,17 +70,22 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
   const [section,setSection] = useState("tasks");
   const [preview,setPreview] = useState(null);
   const [editor,setEditor] = useState(null);
-  const accessible = new Map(subjects.map(s => [s.id,s.title]));
+  const banks = new Map();
+  for (const s of subjects) {
+    if (!banks.has(bankIdOf(s)) || s.id === subject) banks.set(bankIdOf(s),s);
+  }
+  const filterBank = bankIdOf(subjects.find(s => s.id === subject));
   const taskNames = new Map(tasks.map(t => [t.id,t.title]));
   const isTasks = section === "tasks";
-  const rows = (isTasks ? tasks : bank.questions).filter(row => accessible.has(row.subject) &&
-    (!subject || row.subject === subject) && (row.title + " " + promptOf(row)).toLowerCase().includes(query.toLowerCase()));
+  const rows = (isTasks ? tasks : bank.questions).filter(row => banks.has(row.subject) &&
+    (!subject || row.subject === filterBank) && (row.title + " " + promptOf(row)).toLowerCase().includes(query.toLowerCase()));
   function edit(item) { setEditor(item); }
   if (preview) return <WorkspacePage title={preview.title} returnAction={{label:"К банку",onClick:() => setPreview(null)}}>
     <TeacherActivityPreview item={preview}/>
   </WorkspacePage>;
   if (editor) return <BankEditor initial={editor} subjects={subjects} tasks={tasks} onClose={() => setEditor(null)}
     onSave={({existing, ...record}) => {
+      record.subject = bankIdOf(subjects.find(s => s.id === record.subject));
       save(current => ({...current, [section]:[...current[section].filter(row => row.id !== record.id),record]}));
       setEditor(null);
     }}/>;
@@ -104,10 +110,10 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
       return count;
     }}/>
     <Table width="max" wordWrap data={rows} emptyMessage="Материалов по этому запросу нет." columns={[
-      {id:"title",name:isTasks ? "Задача" : "Название",template:row => <Button view="flat" onClick={() => edit({...row,existing:true})}>{row.title}</Button>},
+      {id:"title",name:isTasks ? "Задача" : "Название",template:row => <Button view="flat" onClick={() => edit({...row,subject:banks.get(row.subject).id,existing:true})}>{row.title}</Button>},
       {id:"prompt",name:"Условие",template:row => row.kind === "theory" || !row.kind ? <PromptPreview source={row.prompt}/> :
         <Button view="flat" onClick={() => setPreview(row)}>{isTasks ? "Обзор задачи" : "Обзор теста"}</Button>},
-      {id:"subject",name:"Предмет",template:row => accessible.get(row.subject)},
+      {id:"subject",name:"Предмет",template:row => subjectOptionTitle(banks.get(row.subject),subjects)},
       ...(!isTasks ? [{id:"scope",name:"Связанные задачи",template:row => row.taskIds.length ? row.taskIds.map(id => taskNames.get(id)).join(", ") : "Весь предмет"}] : [])
     ]}/>
   </article>);

@@ -11,13 +11,17 @@ const MarkdownField = React.lazy(() => import("./MarkdownField"));
 
 import {demoGroup, demoTeacher, groups, teachers} from "./subjectOptions";
 
-export function SubjectSettings({ subject, onSave, onClose }) {
+export function SubjectSettings({ subject, copying = false, onSave, onClose }) {
   const current = currentSemester();
-  const owner = subject?.teacher ?? demoTeacher;
+  const owner = copying ? demoTeacher : subject?.teacher ?? demoTeacher;
+  const sourceYear = academicYearOf(subject) ?? current.academicYear;
+  const years = academicYearOptions(current.academicYear);
+  const copyYear = years.find(option => option.value > sourceYear)?.value ?? years.at(-1).value;
+  const [error,setError] = useState("");
   const [form, setForm] = useState(() => ({
     ...coverSettings(subject),
     semesterNumber: semesterNumberOf(subject) ?? (current.season === "spring" ? 2 : 1),
-    academicYear: academicYearOf(subject) ?? current.academicYear,
+    academicYear: copying ? copyYear : sourceYear,
     title: subject?.title ?? "",
     groups: subject?.groups ?? [demoGroup],
     teachers: [...new Set([owner, ...(subject?.teachers ?? [demoTeacher])])],
@@ -32,14 +36,17 @@ export function SubjectSettings({ subject, onSave, onClose }) {
   const canSave = Boolean(form.title.trim()) && yearValid;
   function submit(event) {
     event.preventDefault();
-    if (canSave) onSave({ ...form, title: form.title.trim() });
+    if (!canSave) return;
+    try { onSave({ ...form, title: form.title.trim() }); }
+    catch (failure) { setError(failure.message); }
   }
-  const caption = subject ? "Настройки предмета" : "Новый предмет";
+  const caption = copying ? "Копирование предмета" : subject ? "Настройки предмета" : "Новый предмет";
   return (
     <WorkspacePage
       title={caption}
       actions={
         <>
+          {error && <span role="alert">{error}</span>}
           <Button size="xl" onClick={onClose}>
             Отмена
           </Button>
@@ -50,12 +57,13 @@ export function SubjectSettings({ subject, onSave, onClose }) {
             extraProps={{ form: "subject-settings" }}
             disabled={!canSave}
           >
-            {subject ? "Сохранить" : "Создать"}
+            {copying ? "Создать копию" : subject ? "Сохранить" : "Создать"}
           </Button>
         </>
       }
     >
       <form className="subjectForm" id="subject-settings" onSubmit={submit}>
+        {copying && <p>Практические работы будут скопированы со сдвигом сроков на выбранный учебный год. Задачи останутся в общем банке.</p>}
         <FormRow className="subjectTitleRow" direction="column" label="Название предмета" fieldId="subject-title" required>
           <TextInput
             id="subject-title"
