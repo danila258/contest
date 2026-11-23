@@ -65,7 +65,7 @@ export function AssignmentDetails({renderActivityWorks, work, subject, teacher, 
           <h2>{teacher ? item.title : `${index + 1}. ${item.title}`}</h2>
         </header>;
         const linkedWorks = renderActivityWorks(item,work.id);
-        if (teacher) return <Card key={item.id}>{heading}{linkedWorks}<TeacherActivityPreview item={item}/></Card>;
+        if (teacher) return <section key={item.id}>{heading}{linkedWorks}<TeacherActivityPreview item={item}/></section>;
         return <StudentActivity key={item.id} item={item} heading={heading} linkedWorks={linkedWorks} state={activityAttempts[item.id]}
           due={Date.parse(work.dueAt)} update={transform => onActivityUpdate(item.id,transform)}>
           {showTasks && work.activities.length > 1 && (

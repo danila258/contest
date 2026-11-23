@@ -85,14 +85,14 @@ function Program({item, update}) {
         {item.mode !== "none" && <Toggle label="Показывать студенту логи тестов" checked={item.logs} onUpdate={logs => update({logs})}/>}
       </fieldset>
       {item.mode !== "none" && <div className="programTests">
-        {item.cases.map((c,i) => <fieldset className="assignmentBlock" key={c.id}><legend>Проверочный тест {i+1}</legend>
-          {item.mode === "unit" ? <CodeEditor filename="Проверочный тест" initialValue={c.code} onChange={code => update({cases:replace(item.cases,c.id,{code})})}/> :
+        {item.cases.map((c,i) => <fieldset className="assignmentBlock" key={c.id}><legend>Тест {i+1}</legend>
+          {item.mode === "unit" ? <CodeEditor filename="Тест" initialValue={c.code} onChange={code => update({cases:replace(item.cases,c.id,{code})})}/> :
             <div className="assignmentPair">{["input","output"].map(key => <label className="programTestField" key={key}>{key === "input" ? "Входные данные" : "Ожидаемый вывод"}
               <TextArea value={c[key]} onUpdate={value => update({cases:replace(item.cases,c.id,{[key]:value})})}/></label>)}</div>}
-          <Button disabled={item.cases.length === 1} onClick={() => update({cases:item.cases.filter(v => v.id !== c.id)})}>Удалить проверочный тест</Button>
+          <Button disabled={item.cases.length === 1} onClick={() => update({cases:item.cases.filter(v => v.id !== c.id)})}>Удалить тест</Button>
         </fieldset>)}
         <div className="assignmentControls">
-          <Button onClick={() => update({cases:[...item.cases,testCase()]})}>Добавить проверочный тест</Button>
+          <Button onClick={() => update({cases:[...item.cases,testCase()]})}>Добавить тест</Button>
         </div>
       </div>}
       <fieldset className="assignmentBlock"><legend>Эталонное решение</legend>

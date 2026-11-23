@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   Label,
-  Table,
   Text,
   TextInput,
   Icon,
@@ -37,6 +36,7 @@ import { AssignmentForm } from "./AssignmentForm";
 import {ActivityWorks} from "./ActivityWorks";
 import {collectTasks, newActivity, worksUsingActivity} from "./activityData";
 import imported from "./imported-data.json";
+import {CatalogueTable} from "./CatalogueTable";
 import { TaskBank } from "./TaskBank";
 import {editInProgress, withWorkAccess, useWorkBusy} from "./workAccess";
 import {WorkSubject} from "./WorkSummary";
@@ -223,10 +223,13 @@ function Workspace({onLogout}) {
           s.teachers.includes(demoTeacher)
         : studentHasAccess(s,demoStudent),
   );
+  const subjectsById = new Map(all.map(s => [s.id,s]));
+  const availableForLinks = works.filter(w => subjectsById.has(w.subject) && (teacher || !w.opensAt || Date.parse(w.opensAt) <= now));
+  function linkedWorks(item, ownerId) {
+    return worksUsingActivity(availableForLinks,item,ownerId,bank.questions);
+  }
   function renderActivityWorks(item, ownerId) {
-    const subjectsById = new Map(all.map(s => [s.id,s]));
-    const available = works.filter(w => subjectsById.has(w.subject) && (teacher || !w.opensAt || Date.parse(w.opensAt) <= now));
-    return <ActivityWorks works={worksUsingActivity(available,item,ownerId,bank.questions)} subjects={subjectsById}/>;
+    return <ActivityWorks works={linkedWorks(item,ownerId)} subjects={subjectsById}/>;
   }
   const current = currentSemester();
   const listedSubjects = page === "Обзор"
@@ -494,37 +497,11 @@ function Workspace({onLogout}) {
     </div>
   );
   const table = (
-      <Table
-        aria-label="Практические работы"
-        width="max"
-        verticalAlign="middle"
-        wordWrap
-        data={displayWorks}
-        getRowDescriptor={(w) => ({ id: w.id })}
-        onRowClick={open}
+      <CatalogueTable label="Практические работы" rows={displayWorks} onOpen={open}
+        icon={w => w.activities ? BookOpen : w.question ? ListUl : Code}
+        subjectLabel={w => subject(w.subject).title}
         emptyMessage={catalogue && (workQuery.trim() || workSubject || filter !== "Все статусы") ? "По выбранным условиям работ нет." : overview && filter === "Все статусы" ? "Сейчас нет работ, доступных для сдачи." : "Работ пока нет."}
         columns={[
-          {
-            id: "title",
-            name: "Название",
-            template: (w) => (
-              <div className="workName">
-                <Button
-                  view="flat"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    open(w);
-                  }}
-                >
-                  <Icon data={w.activities ? BookOpen : w.question ? ListUl : Code} />
-                  {w.title}
-                </Button>
-                <Text variant="caption-2" color="secondary">
-                  {subject(w.subject).title}
-                </Text>
-              </div>
-            ),
-          },
           {id: "deadline", name: "Сдать до", template: workDate},
           ...(teacher ? [] : [{
             id: "status",
@@ -577,7 +554,7 @@ function Workspace({onLogout}) {
     </WorkspaceNavigation>
   );
   if (teacher && page === "Банк задач и тестов") {
-    return <TaskBank renderActivityWorks={renderActivityWorks} subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
+    return <TaskBank linkedWorks={linkedWorks} renderActivityWorks={renderActivityWorks} subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
   }
   if (catalogue) {
     return renderWorkspace(<article className="bankPage">

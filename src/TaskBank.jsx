@@ -1,10 +1,13 @@
+import {Code, ListUl} from "@gravity-ui/icons";
+import {CatalogueTable} from "./CatalogueTable";
+import {WorkLabels} from "./WorkLabels";
 import {savedActivity} from "./activityData";
 import {bankIdOf, subjectOptionTitle} from "./subjectCopy";
 import {JsonImport} from "./JsonImport";
 import {readBank} from "./importData";
 import {SubjectFilter} from "./SubjectFilter";
 import React, {lazy, Suspense, useState} from "react";
-import {Button, Select, Table, TextInput} from "@gravity-ui/uikit";
+import {Button, Select, TextInput} from "@gravity-ui/uikit";
 import {ActivityFields, Input, newActivity} from "./AssignmentActivities";
 import {contentError} from "./AssignmentForm";
 import MarkdownContent from "./MarkdownContent";
@@ -19,7 +22,7 @@ function promptOf(item) {
 
 function PromptPreview({source}) {
   const [open,setOpen] = useState(false);
-  return <details className="bankPrompt" onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details className="bankPrompt" onClick={event => event.stopPropagation()} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>Посмотреть условие</summary>
     {open && <MarkdownContent source={source}/>}
   </details>;
@@ -39,17 +42,18 @@ function BankEditor({linkedWorks, initial, subjects, tasks, onClose, onSave}) {
     try { onSave(savedActivity({...item,title:item.title.trim()})); }
     catch { setError("Не удалось сохранить изменения в этом браузере."); }
   }
-  return <WorkspacePage title={item.kind === "quiz" ? (initial.existing ? "Редактирование теста" : "Новый тест") : isTask ? "Задача банка" : "Теоретический вопрос"} actions={<>
+  const canSubmit = !initial.existing || item !== initial;
+  return <WorkspacePage title={item.kind === "quiz" ? (initial.existing ? "Редактирование теста" : "Новый тест") : isTask ? (initial.existing ? "Редактирование задачи" : "Новая задача") : "Теоретический вопрос"}
+    returnAction={{label:"К банку",onClick:onClose}} actions={canSubmit && <>
     {error && <span role="alert">{error}</span>}
-    <Button size="xl" onClick={onClose}>Отмена</Button>
-    <Button size="xl" view="action" type="submit" extraProps={{form:"bank-editor"}}>{item.kind === "quiz" && !initial.existing ? "Создать" : "Сохранить"}</Button>
+    <Button size="xl" view="action" type="submit" extraProps={{form:"bank-editor"}}>{initial.existing ? "Сохранить изменения" : "Создать"}</Button>
   </>}>
-    <form className="subjectForm" id="bank-editor" onSubmit={submit}>
+    <form className="subjectForm bankEditor" id="bank-editor" onSubmit={submit}>
       {linkedWorks}
-      <fieldset><legend>Предмет</legend>
+      {(!initial.existing || item.kind === "theory") && <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет материала" disabled={initial.existing} filterable value={[item.subject]} options={subjects.map(s => ({value:s.id,content:subjectOptionTitle(s,subjects)}))}
           onUpdate={([subject]) => update({subject,taskIds:[]})}/>
-      </fieldset>
+      </fieldset>}
       {item.kind !== "theory" ? <ActivityFields item={item} update={update}/> : <>
         <Input label="Название вопроса" value={item.title} onUpdate={title => update({title})}/>
         <Suspense fallback={<p>Загрузка редактора…</p>}>
@@ -65,7 +69,7 @@ function BankEditor({linkedWorks, initial, subjects, tasks, onClose, onSave}) {
   </WorkspacePage>;
 }
 
-export function TaskBank({renderActivityWorks,subjects,tasks,bank,save,renderWorkspace}) {
+export function TaskBank({linkedWorks,renderActivityWorks,subjects,tasks,bank,save,renderWorkspace}) {
   const [subject,setSubject] = useState("");
   const [query,setQuery] = useState("");
   const [section,setSection] = useState("tasks");
@@ -76,14 +80,22 @@ export function TaskBank({renderActivityWorks,subjects,tasks,bank,save,renderWor
     if (!banks.has(bankIdOf(s)) || s.id === subject) banks.set(bankIdOf(s),s);
   }
   const filterBank = bankIdOf(subjects.find(s => s.id === subject));
-  const taskNames = new Map(tasks.map(t => [t.id,t.title]));
   const isTasks = section === "tasks";
   const rows = (isTasks ? tasks : bank.questions).filter(row => banks.has(row.subject) &&
     (!subject || row.subject === filterBank) && (row.title + " " + promptOf(row)).toLowerCase().includes(query.toLowerCase()));
   function edit(item) { setEditor(item); }
-  if (preview) return <WorkspacePage title={preview.title} returnAction={{label:"К банку",onClick:() => setPreview(null)}}>
-    {renderActivityWorks(preview)}
-    <TeacherActivityPreview item={preview}/>
+  function editExisting(row) {
+    setPreview(null);
+    edit({...row,subject:banks.get(row.subject).id,existing:true});
+  }
+  if (preview) return <WorkspacePage title={preview.title} returnAction={{label:"К банку",onClick:() => setPreview(null)}}
+    actions={<Button size="l" view="action" onClick={() => editExisting(preview)}>{preview.kind === "quiz" ? "Редактировать тест" : "Редактировать задачу"}</Button>}>
+    <div className="subjectInfo">
+      {renderActivityWorks(preview)}
+      <section className="assignmentLayout">
+        <TeacherActivityPreview item={preview}/>
+      </section>
+    </div>
   </WorkspacePage>;
   if (editor) return <BankEditor linkedWorks={editor.existing && ["program","quiz"].includes(editor.kind) && renderActivityWorks(editor)} initial={editor} subjects={subjects} tasks={tasks} onClose={() => setEditor(null)}
     onSave={({existing, ...record}) => {
@@ -101,7 +113,7 @@ export function TaskBank({renderActivityWorks,subjects,tasks,bank,save,renderWor
         isTasks ? newActivity("program") : {...newActivity("quiz"),taskIds:[]}
       ),subject:subject || subjects[0].id})}>{isTasks ? "Создать задачу" : "Создать тест"}</Button>
     </div>
-    <TextInput aria-label="Поиск по банку" placeholder="Найти по названию или условию" value={query} onUpdate={setQuery} hasClear/>
+    <TextInput controlProps={{"aria-label":"Поиск по банку"}} placeholder="Найти по названию или условию" value={query} onUpdate={setQuery} hasClear/>
     <JsonImport template="tasks" onImport={data => {
       let count;
       save(current => {
@@ -111,12 +123,13 @@ export function TaskBank({renderActivityWorks,subjects,tasks,bank,save,renderWor
       });
       return count;
     }}/>
-    <Table width="max" wordWrap data={rows} emptyMessage="Материалов по этому запросу нет." columns={[
-      {id:"title",name:isTasks ? "Задача" : "Название",template:row => <Button view="flat" onClick={() => edit({...row,subject:banks.get(row.subject).id,existing:true})}>{row.title}</Button>},
-      {id:"prompt",name:"Условие",template:row => row.kind === "theory" || !row.kind ? <PromptPreview source={row.prompt}/> :
-        <Button view="flat" onClick={() => setPreview(row)}>{isTasks ? "Обзор задачи" : "Обзор теста"}</Button>},
-      {id:"subject",name:"Предмет",template:row => subjectOptionTitle(banks.get(row.subject),subjects)},
-      ...(!isTasks ? [{id:"scope",name:"Связанные задачи",template:row => row.taskIds.length ? row.taskIds.map(id => taskNames.get(id)).join(", ") : "Весь предмет"}] : [])
-    ]}/>
+    <CatalogueTable label={isTasks ? "Задачи банка" : "Тесты банка"} rows={rows}
+      onOpen={row => row.kind === "theory" || !row.kind ? editExisting(row) : setPreview(row)}
+      icon={() => isTasks ? Code : ListUl}
+      subjectLabel={row => subjectOptionTitle(banks.get(row.subject),subjects)}
+      details={row => (row.kind === "theory" || !row.kind) && <PromptPreview source={row.prompt}/>}
+      columns={[{id:"works",name:"Практические работы",width:"50%",template:row =>
+        <WorkLabels works={linkedWorks(row)}/>}]}
+      emptyMessage={query.trim() || subject ? "По выбранным условиям материалов нет." : isTasks ? "Задач пока нет." : "Тестов пока нет."}/>
   </article>);
 }

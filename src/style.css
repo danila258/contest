@@ -149,9 +149,24 @@ h2 {
   flex-direction: column;
   align-items: flex-start;
 }
-.workName > span {
-  padding-inline-start: 8px;
+.catalogueTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: inherit;
 }
+.catalogueTitle svg { flex-shrink: 0; }
+tr:has(.catalogueTitle:focus-visible) {
+  outline: 2px solid var(--g-color-line-focus);
+  outline-offset: -2px;
+}
+tr:has(.catalogueTitle:focus-visible) .catalogueTitle { outline: none; }
 .subjectInfo > div {
   padding: 16px;
 }
@@ -200,7 +215,7 @@ h2 {
 .subjectTitleInput { width: 100%; }
 .subjectTitleRow { margin: 0; }
 .subjectForm .subjectTitleRow > :first-child { margin-top: -1.55em; align-self: flex-start; background: var(--g-color-base-background); padding-inline: 5px; }
-.subjectForm fieldset, .subjectForm .subjectTitleRow, .workSubject, .activityWorks {
+.subjectForm fieldset, .subjectForm .subjectTitleRow, .workSubject, .activityWorks, .previewGroup {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 16px;
@@ -211,7 +226,7 @@ h2 {
   min-width: 0;
 }
 .subjectForm .subjectTitleRow { flex-wrap: nowrap; gap: 0; margin-top: .65em; }
-.subjectForm legend, .workSubject legend, .activityWorks legend {
+.subjectForm legend, .workSubject legend, .activityWorks legend, .previewGroup legend {
   font-weight: 500;
   padding: 0 5px;
 }
@@ -350,6 +365,9 @@ h2 {
 }
 .subjectAccess > .teacherAccess { grid-column: 1 / -1; }
 .subjectForm { gap: 24px; }
+.bankEditor { gap: 12px; }
+.bankEditor .gc-form-row { margin-block: 0; }
+.bankEditor .programSettings { gap: 12px; }
 @media (max-width: 620px) {
   .subjectAccess { grid-template-columns: minmax(0, 1fr); }
   .workspacePageActions > button { flex: 1; }
@@ -454,7 +472,8 @@ h2 {
   border-block-start: 1px solid var(--g-color-line-generic);
 }
 .teacherPreview { display: grid; gap: 16px; min-width: 0; overflow-wrap: anywhere; }
-.previewChecks { display: grid; gap: var(--g-spacing-2); }
+.teacherPreview .previewGroup { display: block; }
+.previewGroup .previewFacts { padding: 0; background: transparent; }
 .previewFacts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
@@ -471,7 +490,7 @@ h2 {
 .teacherPreview h3, .teacherPreview h4 { margin: 0; }
 .previewAnswers { list-style: none; margin: 12px 0 0; padding: 0; }
 .previewAnswers li { border-top: 1px solid var(--g-color-line-generic); padding: 8px 0; }
-.previewCase, .previewCode { margin-top: 12px; }
+.previewGroup.previewCase, .previewCode { margin-top: 12px; }
 .teacherPreview pre { max-width: 100%; overflow-x: auto; padding: 12px; background: var(--g-color-base-generic); border-radius: 6px; }
 
 .studentActivity, .quizChoices { display: grid; gap: var(--g-spacing-3); min-width: 0; }
@@ -506,3 +525,7 @@ h2 {
   background: var(--g-color-base-background);
 }
 .loginCard form { display: grid; gap: 16px; margin-top: 16px; }
+
+.workLabels { contain: inline-size; flex-wrap: wrap; }
+.workLabels ul { width: 100%; margin: 0; padding: 0; list-style: none; white-space: normal; overflow-wrap: anywhere; }
+.workLabelsToggle { padding: 0; border: 0; background: transparent; font: inherit; color: var(--g-color-text-primary); cursor: pointer; }

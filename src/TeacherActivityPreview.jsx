@@ -37,25 +37,26 @@ export default function TeacherActivityPreview({item}) {
   const cases = item.cases ?? [];
   const sources = Object.entries(item.sources ?? {}).filter(([name]) => item.mode === "unit" || name === "main.cpp");
   return <div className="teacherPreview">
-    <section><Text as="h3" variant="subheader-2">Условие задачи</Text><MarkdownContent source={item.prompt}/></section>
+    <fieldset className="previewGroup"><legend>Условие задачи</legend>
+      <MarkdownContent source={item.prompt}/>
+    </fieldset>
     <Facts rows={[
       ["Время на решение",item.minutes ? `${item.minutes} мин` : "Без ограничения"],
       ["Способ проверки",programModes[item.mode]],
       ["Логи тестов для студента",item.mode === "none" || item.logs == null ? null : item.logs ? "Доступны" : "Скрыты"],
     ]}/>
-    {item.checks && <section className="previewChecks">
-      <Text as="h3" variant="subheader-2">Проверки кода</Text>
+    {item.checks && <fieldset className="previewGroup"><legend>Проверки кода</legend>
       <Facts rows={Object.entries(checkNames).map(([key,name]) => [name,checkModes[item.checks[key]]])}/>
-    </section>}
+    </fieldset>}
     {sources.length > 0 && <Disclosure summary="Начальный код" keepMounted={false}>
       {sources.map(([name,code]) => <CodeBlock key={name} label={name} value={code}/>)}
     </Disclosure>}
-    {cases.length > 0 && <Disclosure summary={`Проверочные тесты · ${cases.length}`} keepMounted={false}>
-      {cases.map((c,i) => <section className="previewCase" key={c.id ?? i}>
-        <Text as="h4" variant="subheader-1">Тест {i+1}</Text>
+    {cases.length > 0 && <Disclosure summary={`Тесты · ${cases.length}`} keepMounted={false}>
+      {cases.map((c,i) => <fieldset className="previewGroup previewCase" key={c.id ?? i}>
+        <legend>Тест {i+1}</legend>
         {item.mode === "unit" ? <CodeBlock label="Код проверки" value={c.code}/> :
           <><CodeBlock label="Входные данные" value={c.input}/><CodeBlock label="Ожидаемый вывод" value={c.output}/></>}
-      </section>)}
+      </fieldset>)}
     </Disclosure>}
     {item.reference && <Disclosure summary="Эталонное решение" keepMounted={false}><pre><code>{item.reference}</code></pre></Disclosure>}
   </div>;
