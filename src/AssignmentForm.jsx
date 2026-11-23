@@ -196,19 +196,21 @@ export function AssignmentForm({renderActivityWorks, copying, initialWork, subje
           <TeacherActivityPreview item={item}/>
         </Disclosure></> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
-      <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}
-        options={bankTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
-        onUpdate={([id]) => {
-          const task = bankTasks.find(entry => entry.id === id);
-          if (task) setItems([...items, {...task, taskId:id, id:newId()}]);
-        }}/>
-      <Select aria-label="Прикрепить тест из банка" placeholder="Прикрепить тест из банка" filterable value={[]}
-        options={bankQuizzes.filter(quiz => quiz.kind === "quiz").map(quiz =>
-          ({value:quiz.id,content:quiz.title,disabled:items.some(item => item.quizId === quiz.id)}))}
-        onUpdate={([id]) => {
-          const quiz = bankQuizzes.find(row => row.id === id);
-          if (quiz) setItems([...items,{...quiz,quizId:id,id:newId()}]);
-        }}/>
+      <div className="assignmentPair">
+        <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}
+          options={bankTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
+          onUpdate={([id]) => {
+            const task = bankTasks.find(entry => entry.id === id);
+            if (task) setItems([...items, {...task, taskId:id, id:newId()}]);
+          }}/>
+        <Select aria-label="Прикрепить тест из банка" placeholder="Прикрепить тест из банка" filterable value={[]}
+          options={bankQuizzes.filter(quiz => quiz.kind === "quiz").map(quiz =>
+            ({value:quiz.id,content:quiz.title,disabled:items.some(item => item.quizId === quiz.id)}))}
+          onUpdate={([id]) => {
+            const quiz = bankQuizzes.find(row => row.id === id);
+            if (quiz) setItems([...items,{...quiz,quizId:id,id:newId()}]);
+          }}/>
+      </div>
       <div className="assignmentControls">{[["quiz","Добавить тест"],["program","Добавить задачу"]].map(([kind,label]) =>
         <Button key={kind} size="l" onClick={() => setItems([...items,newActivity(kind)])}>{label}</Button>)}</div>
       </>}
