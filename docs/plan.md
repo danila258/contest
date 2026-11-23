@@ -2,7 +2,7 @@
 
 These milestones group the approved [requirements](requirements.md) into deliverable workflows. The acceptance examples are checkpoints for each milestone.
 
-In milestone 1, set up Vite as the local development server for the student and teacher interfaces. Verify that editing a Gravity UI component updates the browser without restarting the server and that the shared login page can reach FastAPI.
+The [current prototype](../README.md) runs both roles in Vite and persists demo data in the browser. The milestones below describe the target platform. When implementing server-backed access in milestone 1, verify the shared login against FastAPI.
 
 | Milestone | Deliverable | Acceptance example |
 | --- | --- | --- |
