@@ -27,8 +27,9 @@ function yearPair(start) {
 export function currentSemester(input = new Date()) {
   const date = dateTime({ input });
   const month = date.month() + 1;
+  const spring = (month === 2 && date.date() >= 5) || (month >= 3 && month <= 8);
   return {
-    season: month >= 2 && month <= 8 ? "spring" : "autumn",
+    season: spring ? "spring" : "autumn",
     academicYear: yearPair(date.year() - (month < 9 ? 1 : 0)),
   };
 }
