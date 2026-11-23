@@ -618,7 +618,7 @@ function Workspace({onLogout}) {
         <Select aria-label="Учебный год" filterable value={[subjectYear]}
           options={[{value:"", content:"Все учебные годы"}, ...opts(years)]}
           onUpdate={([year]) => setSubjectYear(year)}/>
-        <Select aria-label="Семестр" value={[subjectSemester]}
+        <Select aria-label="Семестр" filterable value={[subjectSemester]}
           options={[{value:"", content:"Все семестры"}, ...semesters.map(number => ({value:String(number), content:`Семестр ${number}`}))]}
           onUpdate={([semester]) => setSubjectSemester(semester)}/>
         {subjectAction}
