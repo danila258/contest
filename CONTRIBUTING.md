@@ -6,7 +6,7 @@ Run the project using the [README](README.md). Describe the user role, the scree
 
 Link the relevant section of the [requirements](docs/requirements.md). If the change depends on an open question under “Последующие доработки” (follow-up items), cite its number. Once the team agrees on a rule, update the requirement and its acceptance scenario together. For a visual change, find a comparable screen in the [frontend guide](docs/development.md).
 
-Start a separate branch from the team's current `main`. For example, with `main` checked out and up to date, run `git switch -c fix/bank-filter`. Give each contributor or AI session a separate working directory when tasks run in parallel. To start a second task from this repository, run `git worktree add -b fix/quiz-timer ../contest-quiz-timer main`, then run `npm ci` in the new directory.
+Start a separate branch from the team's current `master`. For example, with `master` checked out and up to date, run `git switch -c fix/bank-filter`. Give each contributor or AI session a separate working directory when tasks run in parallel. To start a second task from this repository, run `git worktree add -b fix/quiz-timer ../contest-quiz-timer master`, then run `npm ci` in the new directory.
 
 ## Find the relevant code
 
