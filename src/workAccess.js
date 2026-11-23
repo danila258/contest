@@ -2,14 +2,6 @@ import {useEffect, useState} from "react";
 
 const lockName = id => `practice.work:${id}`;
 export const editInProgress = "Преподаватель редактирует работу. Дождитесь окончания редактирования.";
-export const alreadyStarted = "Студент уже начал работу. Редактирование закрыто.";
-
-export function workHasStarted(work) {
-  const read = key => JSON.parse(localStorage.getItem("practice." + key)) ?? {};
-  return Object.hasOwn(read("starts"), work.id) || Object.hasOwn(read("drafts"), work.id)
-    || Boolean(read("attempts")[work.id]?.length) || work.state === "Зачтено";
-}
-
 export function withWorkAccess(id, action) {
   if (!navigator.locks) throw new Error("Для доступа к работе откройте приложение через HTTPS или localhost.");
   return navigator.locks.request(lockName(id), {ifAvailable:true}, lock => {

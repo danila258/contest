@@ -1,6 +1,13 @@
 import React from "react";
 import {Card, Text} from "@gravity-ui/uikit";
 
+import MarkdownContent from "./MarkdownContent";
+
+export function WorkDescription({description}) {
+  if (!description?.trim()) return null;
+  return <section><h2>Темы для подготовки</h2><MarkdownContent source={description}/></section>;
+}
+
 export const formatWorkDate = value => new Date(value).toLocaleString("ru-RU", {dateStyle:"long", timeStyle:"short"});
 
 export function WorkSummary({opensAt, dueAt, conditions}) {

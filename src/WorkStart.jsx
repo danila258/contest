@@ -3,7 +3,7 @@ import {Button, Card, Dialog, Text} from "@gravity-ui/uikit";
 import {editInProgress} from "./workAccess";
 import {WorkspacePage} from "./WorkspacePage";
 
-import {Facts, WorkSummary} from "./WorkSummary";
+import {Facts, WorkDescription, WorkSummary} from "./WorkSummary";
 
 function ActivityConditions({item}) {
   if (item.kind === "quiz") {
@@ -46,6 +46,7 @@ export function WorkStart({work, subject, now, busy, returnAction, onStart}) {
         work.sequential ? "Задания открываются по порядку после успешной проверки." : "Задания можно выполнять в любом порядке.",
         work.review ? "Для зачёта требуется подтверждение преподавателя." : "Для зачёта нужно успешно выполнить все задания.",
       ] : []}/>
+      <WorkDescription description={work.description}/>
       {work.activities ? work.activities.map((item,index) => <Card key={item.id}>
         <header className="activitySummaryHeading">
           <Text color="secondary">{index+1}. {item.kind === "quiz" ? "Тест" : "Задача на программирование"}</Text>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {copySubjectLibrary,resolveWorkTasks} from "../src/subjectCopy.js";
+import {copySubjectLibrary,copyWorkLibrary,resolveWorkTasks} from "../src/subjectCopy.js";
 import {readWorks,readBank} from "../src/importData.js";
 
 const source = {id:"original",academicYear:"2027/2028"};
@@ -37,4 +37,25 @@ test("shared bank links work in JSON import and remain scoped to the course",()=
   assert.throws(()=>readWorks(data,[{...target,bankId:"other"}],target.id,original,[]),/отсутствует/);
   const added=readBank({tasks:[{title:"Новая",prompt:"Условие"}]},[target],target.id,original);
   assert.equal(added.tasks[0].subject,source.id);
+});
+
+test("assignment copies reuse both bank materials across repeated and nested copies", () => {
+  const settings = {title:"Копия",description:"Темы",opensAt:work.opensAt,dueAt:work.dueAt};
+  const first = copyWorkLibrary(original,work,settings,source.id);
+  const copy = first.works.at(-1);
+  const quizId = first.questions[0].id;
+  assert.equal(first.questions.length,1);
+  assert.equal(first.works[0].activities[1].quizId,quizId);
+  assert.deepEqual(copy.activities.map(item => item.taskId ?? item.quizId),["p",quizId]);
+  assert.notEqual(copy.id,work.id);
+  assert.notEqual(copy.activities[0].id,work.activities[0].id);
+  const repeated = copyWorkLibrary(first,first.works[0],settings,source.id);
+  const updated = [{...first.questions[0],title:"Обновлённый тест"}];
+  const resolved = resolveWorkTasks(copy,first.tasks,null,updated);
+  assert.equal(resolved.activities[1].title,"Обновлённый тест");
+  const nested = copyWorkLibrary(repeated,resolved,settings,source.id);
+  assert.equal(nested.questions.length,1);
+  assert.equal(nested.works.at(-1).activities[1].quizId,quizId);
+  assert.equal(nested.tasks,original.tasks);
+  assert.equal(original.questions.length,0);
 });

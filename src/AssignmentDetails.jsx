@@ -5,9 +5,9 @@ import {WorkspacePage} from "./WorkspacePage";
 import StudentActivity from "./StudentActivity";
 import TeacherActivityPreview from "./TeacherActivityPreview";
 
-import {formatWorkDate, WorkSummary} from "./WorkSummary";
+import {formatWorkDate, WorkDescription, WorkSummary} from "./WorkSummary";
 
-export function AssignmentDetails({work, subject, teacher, activityAttempts, onActivityUpdate, editBlocked, editError, onEdit, returnAction}) {
+export function AssignmentDetails({work, subject, teacher, statistics, activityAttempts, onActivityUpdate, editBlocked, editError, onEdit, onCopy, returnAction}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [query, setQuery] = useState("");
   const selected = work.activities[selectedIndex];
@@ -26,6 +26,7 @@ export function AssignmentDetails({work, subject, teacher, activityAttempts, onA
   ].filter(Boolean);
   return <WorkspacePage wide={!teacher} title={work.title} returnAction={returnAction} actions={teacher ? <>
     {(editBlocked || editError) && <Text role="status">{editBlocked || editError}</Text>}
+    <Button view="outlined" size="l" onClick={onCopy}>Копировать работу</Button>
     <Button disabled={Boolean(editBlocked)} view="action" size="l" onClick={onEdit}>Редактировать работу</Button>
   </> : null}>
     <div className={teacher ? "subjectInfo" : "studentWorkBody"}>
@@ -34,6 +35,8 @@ export function AssignmentDetails({work, subject, teacher, activityAttempts, onA
         <div className="studentDates"><span>Открытие доступа — {formatWorkDate(work.opensAt)}</span><span>Сдать до {formatWorkDate(work.dueAt)}</span></div>
         {conditions.map(condition => <div key={condition}>{condition}</div>)}
       </>}
+      <WorkDescription description={work.description}/>
+      {statistics || <>
       {!work.activities.length && <p>В этой работе пока нет заданий.</p>}
       <section className={teacher ? "assignmentLayout" : "assignmentLayout studentAssignment"}>
       {showTasks && <nav aria-label="Задания работы">
@@ -79,6 +82,7 @@ export function AssignmentDetails({work, subject, teacher, activityAttempts, onA
         </StudentActivity>;
       })}
       </section>
+      </>}
     </div>
   </WorkspacePage>;
 }

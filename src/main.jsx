@@ -28,29 +28,29 @@ import "./style.css";
 import { subjects as demoSubjects, works as demoWorks, deadline, starter } from "./data";
 
 import { SubjectCover, coverSettings } from "./SubjectCover";
-import { academicYearOf, currentSemester, inCurrentSemester, semesterLabel } from "./semester";
+import { academicYearOf, currentSemester, inCurrentSemester, semesterLabel, semesterNumberOf } from "./semester";
 import {JsonImport} from "./JsonImport";
 import {readSubjects, readWorks, readWorkDraft} from "./importData";
 import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
-import {collectTasks} from "./activityData";
+import {collectTasks, newActivity} from "./activityData";
 import imported from "./imported-data.json";
 import { TaskBank } from "./TaskBank";
-import {alreadyStarted, editInProgress, withWorkAccess, workHasStarted, useWorkBusy} from "./workAccess";
+import {editInProgress, withWorkAccess, useWorkBusy} from "./workAccess";
 import {WorkStart} from "./WorkStart";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
 import { WorkspacePage } from "./WorkspacePage";
 import {demoGroup, demoStudent, demoTeacher, studentHasAccess} from "./subjectOptions";
-import {bankIdOf, copySubjectLibrary, referenceWorkTasks, resolveWorkTasks} from "./subjectCopy";
+import {bankIdOf, copySubjectLibrary, copyWorkLibrary, referenceWorkTasks, resolveWorkTasks} from "./subjectCopy";
 import { SubjectSettings } from "./SubjectSettings";
 
 import { LoginPage } from "./LoginPage";
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import MarkdownContent from "./MarkdownContent";
-import TeacherActivityPreview from "./TeacherActivityPreview";
+import {WorkStatistics} from "./WorkStatistics";
 
 const subjects = [...demoSubjects,...imported.subjects];
 
@@ -145,7 +145,29 @@ function Workspace({onLogout}) {
     const stored = localStorage.getItem("practice.library");
     saveLibrary(change(stored ? withImportedData(JSON.parse(stored)) : bank));
   }
-  const savedWorks = React.useMemo(() => bank.works.map(w => resolveWorkTasks(w,bank.tasks,starts[w.id])), [bank,starts]);
+  const [datedDemoWorks] = useState(() => demoWorks.map(work => {
+    const due = deadline(work.day);
+    due.setHours(23, 59, 0, 0);
+    return {...work, dueAt:due.toISOString()};
+  }));
+
+  const [editableDemos] = useState(() => datedDemoWorks.map(work => {
+    const opens = new Date(work.dueAt);
+    opens.setDate(opens.getDate() - 14);
+    const activity = work.question ? newActivity("quiz") : bank.tasks.find(item => item.id === work.id) ?? {...newActivity("program"), id:work.id, title:work.title, prompt:work.task};
+    const item = work.question ? {...activity, id:work.id, title:work.title, questions:[{...activity.questions[0],
+      prompt:work.question, answers:work.answers.map((text,i) => ({id:String(i),text,correct:text === work.correct}))}]}
+      : {...activity,taskId:activity.id};
+    return {...work, opensAt:opens.toISOString(), activities:[item]};
+  }));
+  const teacher = role === "Преподаватель";
+  const publishedWorks = React.useMemo(() => [
+    ...(teacher ? editableDemos : datedDemoWorks).filter(w => !bank.works.some(saved => saved.id === w.id)),
+    ...bank.works.map(w => resolveWorkTasks(w,bank.tasks,null,bank.questions)),
+  ], [teacher, editableDemos, datedDemoWorks, bank]);
+  const works = React.useMemo(() => teacher ? publishedWorks : publishedWorks.map(w =>
+    starts[w.id]?.work ?? resolveWorkTasks(w,bank.tasks,starts[w.id],bank.questions)), [publishedWorks,teacher,starts,bank]);
+
   const bankTasks = bank.tasks;
   const [creatingWork, setCreatingWork] = useState(false);
   const releaseEditor = React.useRef(null);
@@ -161,16 +183,15 @@ function Workspace({onLogout}) {
     return () => { window.removeEventListener("pagehide", closeForm); releaseEditor.current?.(); };
   }, []);
   React.useEffect(() => {
-    if (!creatingWork && active?.activities) {
-      const latest = savedWorks.find(work => work.id === active.id);
+    if (!creatingWork && active) {
+      const latest = works.find(work => work.id === active.id);
       if (latest && latest !== active) open(latest);
     }
-  }, [active, savedWorks, creatingWork]);
+  }, [active, works, creatingWork]);
   async function editWork() {
     try {
       setEditFailure(null);
       await withWorkAccess(active.id, () => {
-        if (workHasStarted(active)) throw new Error(alreadyStarted);
         return new Promise(resolve => {
           releaseEditor.current = resolve;
           setCreatingWork(true);
@@ -181,20 +202,14 @@ function Workspace({onLogout}) {
   const [workSubject,setWorkSubject] = useState("");
   const [subjectQuery, setSubjectQuery] = useState("");
   const [subjectYear, setSubjectYear] = useState("");
+  const [subjectSemester, setSubjectSemester] = useState("");
   const [workQuery,setWorkQuery] = useState("");
   const catalogue = page === "Практические работы";
-  const [datedDemoWorks] = useState(() => demoWorks.map(work => {
-    const due = deadline(work.day);
-    due.setHours(23, 59, 0, 0);
-    return {...work, dueAt:due.toISOString()};
-  }));
-  const works = [...datedDemoWorks, ...savedWorks];
   const [now, setNow] = useState(Date.now);
   React.useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000 * 30);
     return () => clearInterval(timer);
   }, []);
-  const teacher = role === "Преподаватель";
   // Old demo records were visible to both profiles before access settings existed.
   const savedIds = new Set(extra.map((s) => s.id));
   const baseSubjects = [...subjects,...(bank.copiedSubjects ?? [])];
@@ -228,6 +243,7 @@ function Workspace({onLogout}) {
   const visibleWorks = works.filter(w => {
     if (!subject(w.subject)) return false;
     const opened = !w.opensAt || Date.parse(w.opensAt) <= now;
+    if (teacher && !overview) return true;
     return opened && ((!teacher && !overview) || deadlineOf(w) > now);
   });
   if (overview) visibleWorks.sort((a, b) => deadlineOf(a) - deadlineOf(b));
@@ -241,6 +257,7 @@ function Workspace({onLogout}) {
     if (next !== "Предметы") {
       setSubjectQuery("");
       setSubjectYear("");
+      setSubjectSemester("");
     }
     setWorkSubject("");
     setWorkQuery("");
@@ -275,7 +292,7 @@ function Workspace({onLogout}) {
   function saveSubject(settings) {
     if (settingsOpen === "copy") {
       const copy = {...settings,id:newId(),teacher:demoTeacher,bankId:bankIdOf(selected)};
-      updateLibrary(current => copySubjectLibrary(current,selected,copy,datedDemoWorks));
+      updateLibrary(current => copySubjectLibrary(current,selected,copy,datedDemoWorks.filter(w => !current.works.some(saved => saved.id === w.id))));
       showSettings(false);
       go("Предметы",copy);
       return;
@@ -292,11 +309,24 @@ function Workspace({onLogout}) {
     go("Предметы", saved.teachers.includes(demoTeacher) ? saved : null);
   }
   if (creatingWork && teacher) {
-    return <AssignmentForm initialWork={active} subject={active ? subject(active.subject) : selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks}
+    return <AssignmentForm copying={creatingWork === "copy"} initialWork={active} subject={active ? subject(active.subject) : selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks} bankQuizzes={bank.questions}
       onImport={(data, fallback) => readWorkDraft(data,selected ? [selected] : all,fallback,bank,demoWorks)}
       onClose={closeForm} onSave={work => {
-      if (active && workHasStarted(active)) throw new Error(alreadyStarted);
       const workBankId = bankIdOf(all.find(s => s.id === work.subject));
+      if (creatingWork === "copy") {
+        let copy;
+        updateLibrary(current => {
+          const original = current.works.find(row => row.id === active.id);
+          const latest = original ? resolveWorkTasks(original,current.tasks,null,current.questions) : active;
+          if (JSON.stringify(latest) !== JSON.stringify(active)) throw Error("Исходная работа изменилась. Откройте форму копирования заново.");
+          const next = copyWorkLibrary(current,latest,work,workBankId);
+          copy = resolveWorkTasks(next.works.at(-1),next.tasks,null,next.questions);
+          return next;
+        });
+        closeForm();
+        open(copy);
+        return;
+      }
       const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
         .map(item => ({...item, subject:workBankId}));
       const activities = work.activities.map(item => item.kind === "program"
@@ -304,12 +334,17 @@ function Workspace({onLogout}) {
       const saved = {...active,...work,activities};
       updateLibrary(current => {
         const existing = current.works.find(w => w.id === work.id);
-        if (active && JSON.stringify(resolveWorkTasks(existing,current.tasks)) !== JSON.stringify(active)) {
+        if (active && JSON.stringify(existing ? resolveWorkTasks(existing,current.tasks,null,current.questions) : editableDemos.find(w => w.id === work.id)) !== JSON.stringify(active)) {
           throw Error("Работа изменилась в другой вкладке. Обновите страницу и снова откройте работу для редактирования.");
         }
         if (!active && existing) throw Error(`Работа с ID «${work.id}» уже существует.`);
-        const record = workBankId === work.subject ? saved : referenceWorkTasks(saved);
-        return {...current, tasks:[...current.tasks,...newTasks], works:active ? current.works.map(w => w.id === work.id ? record : w) : [...current.works,record]};
+        if (active && !starts[work.id]?.work && (starts[work.id] || Object.hasOwn(drafts,work.id) || attempts[work.id]?.length || active.state === "Зачтено")) {
+          const previous = existing ? resolveWorkTasks(existing,current.tasks,starts[work.id],current.questions) : datedDemoWorks.find(w => w.id === work.id);
+          const storedStarts = JSON.parse(localStorage.getItem("practice.starts")) ?? {};
+          saveStarts({...storedStarts,[work.id]:{startedAt:starts[work.id]?.startedAt ?? starts[work.id],work:previous}});
+        }
+        const record = workBankId !== work.subject || saved.usesBankReferences ? referenceWorkTasks(saved) : saved;
+        return {...current, tasks:[...current.tasks,...newTasks], works:existing ? current.works.map(w => w.id === work.id ? record : w) : [...current.works,record]};
       });
       if (active) open(saved);
       if (!active && catalogue) {
@@ -329,20 +364,26 @@ function Workspace({onLogout}) {
         setNow(time);
         const storedLibrary = JSON.parse(localStorage.getItem("practice.library"));
         const latest = storedLibrary?.works.find(w => w.id === active.id);
-        if (latest && JSON.stringify(resolveWorkTasks(latest,withImportedData(storedLibrary).tasks)) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
+        if (latest && JSON.stringify(resolveWorkTasks(latest,withImportedData(storedLibrary).tasks,null,withImportedData(storedLibrary).questions)) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
         if (time < Date.parse(active.opensAt)) throw new Error("Время открытия работы ещё не наступило.");
         if (time >= deadlineOf(active) || active.activities?.length === 0) return;
         const saved = JSON.parse(localStorage.getItem("practice.starts")) ?? starts;
         const startedAt = new Date(time).toISOString();
-        const start = latest?.activities?.some(item => item.taskId && !item.kind)
-          ? {startedAt,activities:active.activities} : startedAt;
+        const start = {startedAt,work:active};
         saveStarts({...saved,[active.id]:saved[active.id] ?? start});
       }))}/>;
   }
   if (active?.activities) {
-    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onEdit={editWork}
+    const start = starts[active.id];
+    const demo = editableDemos.includes(active) && datedDemoWorks.find(work => work.id === active.id);
+    const studentWork = start?.work ?? (demo || resolveWorkTasks(active,bankTasks,start,bank.questions));
+    const status = state(studentWork);
+    const statistics = teacher && (!active.opensAt || Date.parse(active.opensAt) <= now) ? <WorkStatistics subject={subject(active.subject)}
+      work={studentWork} currentTotal={active.activities.length} status={status === "Доступна" ? "Не приступал" : status}
+      activityAttempts={activityAttempts[active.id] ?? {}} submissions={attempts[active.id] ?? []}/> : null;
+    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onEdit={editWork} onCopy={() => setCreatingWork("copy")}
       activityAttempts={activityAttempts[active.id] ?? {}} onActivityUpdate={(id,transform) => updateActivity(active.id,id,transform)}
-      editBlocked={teacher && (workHasStarted(active) ? alreadyStarted : busy ? editInProgress : "")}
+      statistics={statistics} editBlocked={teacher && busy ? editInProgress : ""}
       editError={editFailure?.id === active.id ? editFailure.message : ""} returnAction={returnAction}/>;
   }
   if (settingsOpen && teacher) {
@@ -357,85 +398,62 @@ function Workspace({onLogout}) {
   }
   if (active) {
     const latestAttempt = attempts[active.id]?.at(-1);
-    const showTasks = !teacher && (!active.question || (latestAttempt && latestAttempt.answer === drafts[active.id]));
+    const showTasks = !active.question || (latestAttempt && latestAttempt.answer === drafts[active.id]);
     return (
-      <WorkspacePage wide={!teacher} title={active.title} returnAction={returnAction}>
-        <div className={teacher ? undefined : "assignmentLayout studentAssignment"}>
-          {!teacher && active.question && <aside className="quizProgress">
+      <WorkspacePage wide title={active.title} returnAction={returnAction}>
+        <div className="assignmentLayout studentAssignment">
+          {active.question && <aside className="quizProgress">
             <Card className="quizProgressCard"><Text variant="subheader-2">Вопрос 1 из 1</Text></Card>
           </aside>}
           {showTasks && <aside className="singleAssignmentTask">
             <Card className="quizProgressCard"><Text variant="subheader-2">Задания</Text><Text>1. {active.title}</Text></Card>
           </aside>}
-        <div className={teacher ? "activity" : "activity studentActivityPanel"}>
+        <div className="activity studentActivityPanel">
           <small>
             {subject(active.subject).title} · Сдать до {workDate(active)}
           </small>
-          {teacher ? <TeacherActivityPreview item={active.question ? {
-            kind:"quiz", questions:[{id:active.id, prompt:active.question, answers:active.answers.map((text,i) =>
-              ({id:i,text,correct:text === active.correct}))}],
-          } : {kind:"program",prompt:active.task,sources:{"main.cpp":starter}}}/> :
-            <MarkdownContent source={active.question || active.task}/>}
-          {teacher ? (
-            <>
-              <h3>Попытки Анны Смирновой</h3>
-              {!attempts[active.id]?.length && (
-                <p>Новых демонстрационных попыток нет.</p>
-              )}
-              {attempts[active.id]?.map((a, i) => (
-                <div key={a.time}>
-                  <b>
-                    Попытка {i + 1} · {a.status}
-                  </b>
-                  <pre>{a.answer}</pre>
-                </div>
-              ))}
-            </>
+          <MarkdownContent source={active.question || active.task}/>
+          {active.question ? (
+            <Select
+              aria-label="Ответ"
+              placeholder="Выберите ответ"
+              value={drafts[active.id] ? [drafts[active.id]] : []}
+              options={opts(active.answers)}
+              onUpdate={(v) => saveDrafts({ ...drafts, [active.id]: v[0] })}
+            />
           ) : (
-            <>
-              {active.question ? (
-                <Select
-                  aria-label="Ответ"
-                  placeholder="Выберите ответ"
-                  value={drafts[active.id] ? [drafts[active.id]] : []}
-                  options={opts(active.answers)}
-                  onUpdate={(v) => saveDrafts({ ...drafts, [active.id]: v[0] })}
+            <div>
+              <div>main.cpp</div>
+              <React.Suspense
+                fallback={<p role="status">Загрузка редактора…</p>}
+              >
+                <CodeEditor
+                  key={active.id}
+                  initialValue={drafts[active.id] ?? starter}
+                  onChange={(value) =>
+                    saveDrafts({ ...drafts, [active.id]: value })
+                  }
                 />
-              ) : (
-                <div>
-                  <div>main.cpp</div>
-                  <React.Suspense
-                    fallback={<p role="status">Загрузка редактора…</p>}
-                  >
-                    <CodeEditor
-                      key={active.id}
-                      initialValue={drafts[active.id] ?? starter}
-                      onChange={(value) =>
-                        saveDrafts({ ...drafts, [active.id]: value })
-                      }
-                    />
-                  </React.Suspense>
-                </div>
-              )}
-              <p className="note">
-                Демо · ответы сохраняются в этом браузере.
-                {!active.question && " Проверка C++ недоступна."}
-              </p>
-              {attempts[active.id]?.length > 0 && (
-                <p role="status">Последняя попытка: {state(active)}</p>
-              )}
-              {now >= deadlineOf(active) ? <p role="status">Срок сдачи истёк.</p> : (
-                <Button
-                  view="action"
-                  disabled={active.question && !drafts[active.id]}
-                  onClick={submit}
-                >
-                  {active.question
-                    ? "Проверить ответ"
-                    : "Сохранить демо-отправку"}
-                </Button>
-              )}
-            </>
+              </React.Suspense>
+            </div>
+          )}
+          <p className="note">
+            Демо · ответы сохраняются в этом браузере.
+            {!active.question && " Проверка C++ недоступна."}
+          </p>
+          {attempts[active.id]?.length > 0 && (
+            <p role="status">Последняя попытка: {state(active)}</p>
+          )}
+          {now >= deadlineOf(active) ? <p role="status">Срок сдачи истёк.</p> : (
+            <Button
+              view="action"
+              disabled={active.question && !drafts[active.id]}
+              onClick={submit}
+            >
+              {active.question
+                ? "Проверить ответ"
+                : "Сохранить демо-отправку"}
+            </Button>
           )}
         </div>
         </div>
@@ -587,9 +605,12 @@ function Workspace({onLogout}) {
   );
   if (page === "Предметы" && !selected) {
     const years = [...new Set(all.map(academicYearOf).filter(Boolean))].sort().reverse();
+    const semesters = [...new Set(all.map(semesterNumberOf).filter(Boolean))].sort((a, b) => a - b);
     const query = subjectQuery.trim().toLowerCase();
     const matches = all.filter(s =>
-      (!subjectYear || academicYearOf(s) === subjectYear) && s.title.toLowerCase().includes(query)
+      (!subjectYear || academicYearOf(s) === subjectYear) &&
+      (!subjectSemester || semesterNumberOf(s) === Number(subjectSemester)) &&
+      s.title.toLowerCase().includes(query)
     );
     return renderWorkspace(<article className="bankPage">
       <h1>Предметы</h1>
@@ -597,6 +618,9 @@ function Workspace({onLogout}) {
         <Select aria-label="Учебный год" filterable value={[subjectYear]}
           options={[{value:"", content:"Все учебные годы"}, ...opts(years)]}
           onUpdate={([year]) => setSubjectYear(year)}/>
+        <Select aria-label="Семестр" value={[subjectSemester]}
+          options={[{value:"", content:"Все семестры"}, ...semesters.map(number => ({value:String(number), content:`Семестр ${number}`}))]}
+          onUpdate={([semester]) => setSubjectSemester(semester)}/>
         {subjectAction}
       </div>
       <TextInput controlProps={{"aria-label":"Поиск по предметам"}} placeholder="Найти по названию предмета"
@@ -608,7 +632,7 @@ function Workspace({onLogout}) {
         return added.length;
       }}/>}
       {matches.length ? renderCards(matches) : <p role="status">
-        {query || subjectYear ? "По выбранным условиям предметов нет." : "Предметов пока нет."}
+        {query || subjectYear || subjectSemester ? "По выбранным условиям предметов нет." : "Предметов пока нет."}
       </p>}
     </article>);
   }

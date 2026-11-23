@@ -66,7 +66,7 @@ export function semesterLabel(subject) {
   return number && year ? `Семестр ${number} · ${year}` : "Семестр не указан";
 }
 
-export function assignmentSubjectLabel(subject) {
+export function subjectSelectLabel(subject) {
   const number = semesterNumberOf(subject);
   const semester = number ? `Семестр ${number}` : "Семестр не указан";
   return `${subject.title} · ${semester} · ${academicYearOf(subject) ?? "Год не указан"}`;

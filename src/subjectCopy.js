@@ -22,14 +22,20 @@ function shiftYear(value, years) {
 
 export function referenceWorkTasks(work) {
   return {...work,activities:work.activities.map(item =>
-    item.kind === "program" ? {id:item.id,taskId:item.taskId} : item)};
+    item.quizId ? {id:item.id,quizId:item.quizId} : item.kind === "program" ? {id:item.id,taskId:item.taskId} : item)};
 }
 
-export function resolveWorkTasks(work, tasks, start) {
+export function resolveWorkTasks(work, tasks, start, quizzes = []) {
   if (start?.activities) return {...work,activities:start.activities};
-  if (!work?.activities?.some(item => item.taskId && !item.kind)) return work;
+  if (!work?.activities?.some(item => (item.taskId || item.quizId) && !item.kind)) return work;
   return {...work, activities:work.activities.map(item => {
-    if (!item.taskId || item.kind) return item;
+    if (item.kind) return item;
+    if (item.quizId) {
+      const quiz = quizzes.find(row => row.id === item.quizId && row.kind === "quiz");
+      if (!quiz) throw Error("В банке отсутствует тест " + item.quizId);
+      return {...quiz,...item};
+    }
+    if (!item.taskId) return item;
     const task = tasks.find(row => row.id === item.taskId);
     if (!task) throw Error("В банке отсутствует задача " + item.taskId);
     return {...task, ...item};
@@ -49,6 +55,7 @@ export function copySubjectLibrary(current, source, target, demos) {
     }
     const activities = (items ?? [{taskId:work.id}]).map(item => {
       const id = newId();
+      if (item.quizId) return {id,quizId:item.quizId};
       if (item.kind === "quiz") return {...structuredClone(item),id};
       const taskId = item.taskId ?? item.id;
       if (!current.tasks.some(task => task.id === taskId && task.subject === bankId)) {
@@ -64,4 +71,34 @@ export function copySubjectLibrary(current, source, target, demos) {
       dueAt:due.toISOString(), sequential:Boolean(work.sequential), review:Boolean(work.review), activities};
   });
   return {...current, copiedSubjects:[...(current.copiedSubjects ?? []),{...target,bankId}],works:[...current.works,...copies]};
+}
+
+// Embedded quizzes from older works acquire one bank record on the first copy.
+export function copyWorkLibrary(current, source, settings, bankId) {
+  const questions = [...current.questions];
+  const activities = source.activities.map(item => {
+    if (item.kind === "quiz") {
+      let quiz = item.quizId
+        ? questions.find(row => row.id === item.quizId)
+        : questions.find(row => row.sourceWorkId === source.id && row.sourceActivityId === item.id);
+      if (!quiz && !item.quizId) {
+        quiz = {...item,id:newId(),subject:bankId,taskIds:[],sourceWorkId:source.id,sourceActivityId:item.id};
+        questions.push(quiz);
+      }
+      if (quiz?.kind !== "quiz" || quiz.subject !== bankId) throw Error("Тест отсутствует в банке предмета.");
+      return {id:newId(),quizId:quiz.id};
+    }
+    const taskId = item.taskId ?? item.id;
+    if (!current.tasks.some(task => task.id === taskId && task.subject === bankId)) {
+      throw Error("Задача отсутствует в банке предмета.");
+    }
+    return {id:newId(),taskId};
+  });
+  const copy = {...settings, id:newId(), subject:source.subject, usesBankReferences:true, activities};
+  const works = current.works.map(work => {
+    if (work.id !== source.id) return work;
+    return {...work,activities:work.activities.map((item,index) =>
+      item.kind === "quiz" && !item.quizId ? {...item,quizId:activities[index].quizId} : item)};
+  });
+  return {...current,questions,works:[...works,copy]};
 }

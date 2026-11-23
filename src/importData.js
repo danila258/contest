@@ -141,8 +141,8 @@ export function readActivityDrafts(data, subject, kind) {
   return activities.map((activity,i) => editableActivity(activity,subject,`activities.${i}`));
 }
 
-const workSchema = object({id:key, subject:id.optional(), title, opensAt:localDate, dueAt:localDate,
-  sequential:z.boolean().default(true), review:z.boolean().default(true), activities:z.array(z.union([inlineActivity,object({taskId:id})])).default([])});
+const workSchema = object({id:key, subject:id.optional(), title, description:text.default(""), opensAt:localDate, dueAt:localDate,
+  sequential:z.boolean().default(true), review:z.boolean().default(true), activities:z.array(z.union([inlineActivity,object({taskId:id}),object({quizId:id})])).default([])});
 
 export function readWorks(data, subjects, fallback, current, demoWorks) {
   const rows = parse(object({_comment:text.optional(),works:z.array(workSchema).min(1)}),data).works;
@@ -159,6 +159,11 @@ export function readWorks(data, subjects, fallback, current, demoWorks) {
     const attached = new Set();
     const activities = w.activities.map((activity,j) => {
       const itemPath = path + ".activities." + j;
+      if ("quizId" in activity) {
+        const quiz = current.questions.find(row => row.kind === "quiz" && row.id === activity.quizId && row.subject === bankIdOf(subject));
+        if (!quiz) throw Error(`${itemPath} — тест отсутствует в банке предмета.`);
+        return {...quiz,id:newId(),quizId:quiz.id};
+      }
       if ("taskId" in activity) {
         uniqueId(attached,activity.taskId,itemPath + ".taskId");
         const task = linkedTask(current.tasks,activity.taskId,bankIdOf(subject),itemPath);
