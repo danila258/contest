@@ -76,7 +76,7 @@ function useLocal(key, initial) {
     }
   });
   React.useEffect(() => {
-    if (!["practice.starts","practice.library","practice.attempts","practice.drafts"].includes(key)) return;
+    if (!["practice.activityAttempts","practice.starts","practice.library","practice.attempts","practice.drafts"].includes(key)) return;
     function sync(event) {
       if (event.key === key && event.newValue !== null) set(JSON.parse(event.newValue));
     }
@@ -95,6 +95,7 @@ const statusThemes = {
   "В работе": "info",
   Зачтено: "success",
   Отправлено: "info",
+  "Ожидает проверки": "info",
   "На доработке": "warning",
 };
 function App() {
@@ -103,6 +104,14 @@ function App() {
     [filter, filterSet] = useState("Все статусы");
   const [role, roleSet] = useLocal("practice.role", "Студент"),
     [extra, saveExtra] = useLocal("practice.subjects", []);
+  const [activityAttempts,saveActivityAttempts] = useLocal("practice.activityAttempts", {});
+  function updateActivity(workId,itemId,transform) {
+    const stored = JSON.parse(localStorage.getItem("practice.activityAttempts")) ?? {};
+    const work = stored[workId] ?? {};
+    const previous = work[itemId] ?? {draft:null,history:[]};
+    const result = transform(previous);
+    if (result !== previous) saveActivityAttempts({...stored,[workId]:{...work,[itemId]:result}});
+  }
   const [starts,saveStarts] = useLocal("practice.starts", {});
   const [drafts, saveDrafts] = useLocal("practice.drafts", {}),
     [attempts, saveAttempts] = useLocal("practice.attempts", {});
@@ -190,6 +199,10 @@ function App() {
   function state(work) {
     const availability = deadlineOf(work) <= now ? "Срок истёк" : "Доступна";
 
+    if (work.activities?.length && work.activities.every(item =>
+      activityAttempts[work.id]?.[item.id]?.history.at(-1)?.status === "Зачтено")) {
+      return work.review ? "Ожидает проверки" : "Зачтено";
+    }
     const result = attempts[work.id]?.at(-1)?.status;
     if (result) return result;
     if (availability === "Срок истёк" && work.state !== "Зачтено") return availability;
@@ -313,6 +326,7 @@ function App() {
   }
   if (active?.activities) {
     return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onEdit={editWork}
+      activityAttempts={activityAttempts[active.id] ?? {}} onActivityUpdate={(id,transform) => updateActivity(active.id,id,transform)}
       editBlocked={teacher && (workHasStarted(active) ? alreadyStarted : busy ? editInProgress : "")}
       editError={editFailure?.id === active.id ? editFailure.message : ""} returnAction={returnAction}/>;
   }
@@ -327,9 +341,18 @@ function App() {
     );
   }
   if (active) {
+    const latestAttempt = attempts[active.id]?.at(-1);
+    const showTasks = !teacher && (!active.question || (latestAttempt && latestAttempt.answer === drafts[active.id]));
     return (
-      <WorkspacePage title={active.title} returnAction={returnAction}>
-        <div className="activity">
+      <WorkspacePage wide={!teacher} title={active.title} returnAction={returnAction}>
+        <div className={teacher ? undefined : "assignmentLayout studentAssignment"}>
+          {!teacher && active.question && <aside className="quizProgress">
+            <Card className="quizProgressCard"><Text variant="subheader-2">Вопрос 1 из 1</Text></Card>
+          </aside>}
+          {showTasks && <aside className="singleAssignmentTask">
+            <Card className="quizProgressCard"><Text variant="subheader-2">Задания</Text><Text>1. {active.title}</Text></Card>
+          </aside>}
+        <div className={teacher ? "activity" : "activity studentActivityPanel"}>
           <small>
             {subject(active.subject).title} · Сдать до {workDate(active)}
           </small>
@@ -399,6 +422,7 @@ function App() {
               )}
             </>
           )}
+        </div>
         </div>
       </WorkspacePage>
     );
@@ -482,7 +506,7 @@ function App() {
         "Все статусы",
         ...(!overview ? ["Срок истёк"] : []),
         "Доступна",
-        "В работе", "Зачтено", "Отправлено", "На доработке",
+        "В работе", "Зачтено", "Отправлено", "Ожидает проверки", "На доработке",
       ])}
       onUpdate={(v) => filterSet(v[0])}
     />

@@ -226,9 +226,28 @@ h2 {
   align-items: start;
   gap: 16px;
 }
-.assignmentLayout.withNavigation { grid-template-columns: minmax(200px, 30%) minmax(0, 1fr); }
+.workspacePage.workspacePageWide { --page-gutter: clamp(16px, 2vw, 36px); }
+.studentWorkBody { display: grid; gap: 8px; }
+.studentDates { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.studentWorkBody > .studentAssignment { margin-top: 12px; }
+.studentAssignment {
+  --rail-width: clamp(160px, 18vw, 300px);
+  grid-template-columns: var(--rail-width) minmax(0, 1fr) var(--rail-width);
+  grid-template-areas: "progress activity tasks";
+}
+@media (min-width: 761px) {
+  .studentAssignment:not(:has(> nav, > .singleAssignmentTask)) {
+    grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    grid-template-areas: "progress activity";
+  }
+}
+.studentAssignment > nav, .singleAssignmentTask { grid-area: tasks; }
+.studentAssignment > .studentActivityPanel { grid-area: activity; }
+.quizProgress { grid-area: progress; min-width: 0; position: sticky; top: 0; }
+.quizProgressCard { display: grid; gap: 12px; padding: 12px; }
+.questionNumbers { display: flex; flex-wrap: wrap; gap: 4px; max-height: 45dvh; overflow: auto; }
 .assignmentLayout > .g-card { padding: 16px; overflow-wrap: anywhere; }
-.assignmentLayout nav { min-width: 0; position: sticky; top: 0; }
+.assignmentLayout > nav { min-width: 0; position: sticky; top: 0; }
 .assignmentSidebar {
   display: grid;
   gap: 8px;
@@ -238,9 +257,15 @@ h2 {
 }
 .assignmentSidebar .g-menu__item-content { white-space: normal; overflow-wrap: anywhere; }
 .assignmentLayout .assignmentMobilePicker { display: none; }
-@media (max-width: 700px) {
-  .assignmentLayout.withNavigation { grid-template-columns: minmax(0, 1fr); }
-  .assignmentLayout nav { position: static; }
+@media (max-width: 760px) {
+  .studentAssignment {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "tasks" "progress" "activity";
+  }
+  .studentAssignment:not(:has(> nav, > .singleAssignmentTask)) { grid-template-areas: "progress" "activity"; }
+  .quizProgress { position: static; }
+  .questionNumbers { max-height: 16dvh; }
+  .assignmentLayout > nav { position: static; }
   .assignmentLayout .assignmentSidebar { display: none; }
   .assignmentLayout .assignmentMobilePicker { display: inline-flex; }
 }
@@ -399,13 +424,27 @@ h2 {
 .importErrorBody { overflow-wrap: anywhere; white-space: pre-wrap; }
 .importErrorBody p + p { margin-top: 8px; }
 
-.workConditions .g-card { display: grid; gap: 8px; }
-.workConditions ol { margin-block: 4px 0; }
+.questionTimes { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 0; padding: 0; list-style: none; }
 
-.teacherActivityHeading {
+.activitySummaryHeading {
   display: grid;
   gap: var(--g-spacing-2);
   margin-block-end: var(--g-spacing-4);
+}
+.workSummaryDates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--g-spacing-3) var(--g-spacing-6);
+  margin: 0;
+}
+.workSummaryDates dd { margin: var(--g-spacing-1) 0 0; }
+.workSummaryConditions {
+  display: grid;
+  gap: var(--g-spacing-1);
+  list-style: none;
+  margin: var(--g-spacing-3) 0 0;
+  padding: var(--g-spacing-3) 0 0;
+  border-block-start: 1px solid var(--g-color-line-generic);
 }
 .teacherPreview { display: grid; gap: 16px; min-width: 0; overflow-wrap: anywhere; }
 .previewChecks { display: grid; gap: var(--g-spacing-2); }
@@ -427,3 +466,22 @@ h2 {
 .previewAnswers li { border-top: 1px solid var(--g-color-line-generic); padding: 8px 0; }
 .previewCase, .previewCode { margin-top: 12px; }
 .teacherPreview pre { max-width: 100%; overflow-x: auto; padding: 12px; background: var(--g-color-base-generic); border-radius: 6px; }
+
+.studentActivity, .quizChoices { display: grid; gap: var(--g-spacing-3); min-width: 0; }
+.studentActivityPanel { min-width: 0; overflow-wrap: anywhere; }
+.studentActivity { padding: var(--g-spacing-4); }
+.activityToolbar { justify-content: space-between; margin-bottom: var(--g-spacing-3); }
+.activityToolbar h2 { margin: 4px 0 0; }
+.studentActivity > .g-button, .studentActivity > .g-select { justify-self: start; }
+.activityToolbar, .quizTimer, .activitySteps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--g-spacing-2);
+}
+.studentActivity h3 { margin: 0; }
+.quizTimer { justify-content: flex-start; font-variant-numeric: tabular-nums; }
+.activitySteps {
+  margin-top: var(--g-spacing-3);
+}
+.activitySteps .g-button_view_action { margin-inline-start: auto; }

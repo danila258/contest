@@ -3,11 +3,7 @@ import {Card, Disclosure, Label, Text} from "@gravity-ui/uikit";
 import {programModes} from "./activityData";
 import MarkdownContent from "./MarkdownContent";
 
-function Facts({rows}) {
-  return <dl className="previewFacts">{rows.filter(([,value]) => value != null).map(([label,value]) =>
-    <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
-  )}</dl>;
-}
+import {Facts} from "./WorkSummary";
 
 function CodeBlock({label, value}) {
   return <div className="previewCode"><Text variant="subheader-1">{label}</Text>
@@ -25,7 +21,7 @@ export default function TeacherActivityPreview({item}) {
       ["Для зачёта",item.threshold && `${item.threshold} из ${item.questions.length}`],
       ["Время",item.timer && (item.timer === "question" ? "На каждый вопрос" : `${item.minutes} мин на тест`)],
       ["Порядок ответов",item.shuffle == null ? null : item.shuffle ? "Случайный" : "Фиксированный"],
-      ["Возврат к вопросам",item.back == null ? null : item.back ? "Разрешён" : "Отключён"],
+      ["Возврат к предыдущим вопросам",item.back == null ? null : item.back ? "Разрешён" : "Отключён"],
     ]}/>
     {item.questions.map((q,index) => <Card key={q.id} className="previewQuestion">
       <div className="previewQuestionTitle"><Text as="h3" variant="subheader-2">Вопрос {index+1}</Text>

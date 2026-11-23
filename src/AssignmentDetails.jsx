@@ -2,42 +2,41 @@ import React, {useState} from "react";
 import {Button, Card, Icon, Menu, Select, Text, TextInput} from "@gravity-ui/uikit";
 import {ChevronLeft, ChevronRight} from "@gravity-ui/icons";
 import {WorkspacePage} from "./WorkspacePage";
-import MarkdownContent from "./MarkdownContent";
+import StudentActivity from "./StudentActivity";
 import TeacherActivityPreview from "./TeacherActivityPreview";
 
-const date = value => new Date(value).toLocaleString("ru-RU", {dateStyle:"long", timeStyle:"short"});
+import {formatWorkDate, WorkSummary} from "./WorkSummary";
 
-export function AssignmentDetails({work, subject, teacher, editBlocked, editError, onEdit, returnAction}) {
+export function AssignmentDetails({work, subject, teacher, activityAttempts, onActivityUpdate, editBlocked, editError, onEdit, returnAction}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [query, setQuery] = useState("");
-  const showNavigation = !teacher && work.activities.length > 1;
+  const selected = work.activities[selectedIndex];
+  const attempt = activityAttempts[selected?.id];
+  const showTasks = !teacher && selected && (selected.kind !== "quiz" || (attempt?.history.length > 0 && !attempt.draft));
+  const firstUnpassed = work.activities.findIndex(item => activityAttempts[item.id]?.history.at(-1)?.status !== "Зачтено");
   const options = work.activities.map((item, index) => ({
     value: String(index), content: `${index + 1}. ${item.title}`,
-    disabled: Boolean(work.sequential && index > 0)
+    disabled: Boolean(work.sequential && firstUnpassed >= 0 && index > firstUnpassed)
   }));
   const matchingOptions = options.filter(option => option.content.toLowerCase().includes(query.trim().toLowerCase()));
   const nextOption = options[selectedIndex + 1];
-  return <WorkspacePage title={work.title} returnAction={returnAction} actions={teacher ? <>
+  const conditions = [
+    work.sequential && "Задания открываются по порядку после успешной проверки.",
+    work.review && "Для зачёта требуется подтверждение преподавателя.",
+  ].filter(Boolean);
+  return <WorkspacePage wide={!teacher} title={work.title} returnAction={returnAction} actions={teacher ? <>
     {(editBlocked || editError) && <Text role="status">{editBlocked || editError}</Text>}
     <Button disabled={Boolean(editBlocked)} view="action" size="l" onClick={onEdit}>Редактировать работу</Button>
-  </> : showNavigation && <>
-    <Button view="outlined" size="l" disabled={selectedIndex === 0} onClick={() => setSelectedIndex(selectedIndex - 1)}>
-      <Button.Icon><Icon data={ChevronLeft}/></Button.Icon>Назад
-    </Button>
-    {nextOption && (
-      <Button view="action" size="l" disabled={nextOption.disabled} onClick={() => setSelectedIndex(selectedIndex + 1)}>
-        Далее<Button.Icon side="end"><Icon data={ChevronRight}/></Button.Icon>
-      </Button>
-    )}
-  </>}>
-    <div className="subjectInfo">
+  </> : null}>
+    <div className={teacher ? "subjectInfo" : "studentWorkBody"}>
       <Text color="secondary">{subject.title}</Text>
-      <div>Открытие доступа — {date(work.opensAt)}<br/>Сдать до {date(work.dueAt)}</div>
-      {work.sequential && <div>Задания открываются по порядку после успешной проверки.</div>}
-      {work.review && <div>Для зачёта требуется подтверждение преподавателя.</div>}
+      {teacher ? <WorkSummary opensAt={work.opensAt} dueAt={work.dueAt} conditions={conditions}/> : <>
+        <div className="studentDates"><span>Открытие доступа — {formatWorkDate(work.opensAt)}</span><span>Сдать до {formatWorkDate(work.dueAt)}</span></div>
+        {conditions.map(condition => <div key={condition}>{condition}</div>)}
+      </>}
       {!work.activities.length && <p>В этой работе пока нет заданий.</p>}
-      <section className={showNavigation ? "assignmentLayout withNavigation" : "assignmentLayout"}>
-      {showNavigation && <nav aria-label="Задания работы">
+      <section className={teacher ? "assignmentLayout" : "assignmentLayout studentAssignment"}>
+      {showTasks && <nav aria-label="Задания работы">
         <Card className="assignmentSidebar">
           <Text variant="subheader-2">Задания</Text>
           {options.length > 6 && <TextInput placeholder="Найти задание" aria-label="Найти задание" value={query} onUpdate={setQuery} hasClear/>}
@@ -56,21 +55,29 @@ export function AssignmentDetails({work, subject, teacher, editBlocked, editErro
         <Select className="assignmentMobilePicker" label="Задание" aria-label="Выбрать задание" width="max" size="l" filterable
           value={[String(selectedIndex)]} onUpdate={([value]) => setSelectedIndex(Number(value))} options={options}/>
       </nav>}
-      {work.activities.map((item,index) => (teacher || index === selectedIndex) && <Card key={item.id}>
-        <header className={teacher ? "teacherActivityHeading" : undefined}>
+      {work.activities.map((item,index) => {
+        if (!teacher && index !== selectedIndex) return null;
+        const heading = <header className={teacher ? "activitySummaryHeading" : undefined}>
           <Text color="secondary">{teacher && `${index + 1}. `}{item.kind === "quiz" ? "Тест" : "Задача на программирование"}</Text>
           <h2>{teacher ? item.title : `${index + 1}. ${item.title}`}</h2>
-        </header>
-        {teacher ? <TeacherActivityPreview item={item}/> : item.kind === "quiz" ? <>
-            <p>Попыток — {item.attempts}. Для зачёта — {item.threshold} из {item.questions.length}.</p>
-            {item.questions.map((q,i) => <section key={q.id}><h3>Вопрос {i+1}</h3>
-              <MarkdownContent source={q.prompt}/>
-              <ul>{q.answers.map(a => <li key={a.id}>{a.text}</li>)}</ul>
-            </section>)}
-          </> : <><MarkdownContent source={item.prompt}/>
-            {item.minutes && <p>Время на решение — {item.minutes} мин.</p>}
-          </>}
-      </Card>)}
+        </header>;
+        if (teacher) return <Card key={item.id}>{heading}<TeacherActivityPreview item={item}/></Card>;
+        return <StudentActivity key={item.id} item={item} heading={heading} state={activityAttempts[item.id]}
+          due={Date.parse(work.dueAt)} update={transform => onActivityUpdate(item.id,transform)}>
+          {showTasks && work.activities.length > 1 && (
+          <nav className="activitySteps" aria-label="Переход между заданиями">
+            {selectedIndex > 0 && <Button view="outlined" size="l" onClick={() => setSelectedIndex(selectedIndex - 1)}>
+              <Button.Icon><Icon data={ChevronLeft}/></Button.Icon>Предыдущее задание
+            </Button>}
+            {nextOption && (
+              <Button view="action" size="l" disabled={nextOption.disabled} onClick={() => setSelectedIndex(selectedIndex + 1)}>
+                Следующее задание<Button.Icon side="end"><Icon data={ChevronRight}/></Button.Icon>
+              </Button>
+            )}
+          </nav>
+        )}
+        </StudentActivity>;
+      })}
       </section>
     </div>
   </WorkspacePage>;

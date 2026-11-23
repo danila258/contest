@@ -3,9 +3,9 @@ import { Button, Icon, Text } from "@gravity-ui/uikit";
 import { AppearanceSettings } from "./Appearance";
 import { ArrowLeft } from "@gravity-ui/icons";
 
-export function WorkspacePage({ title, returnAction, actions, children }) {
+export function WorkspacePage({ title, returnAction, actions, wide = false, children }) {
   return (
-    <main className="workspacePage" aria-labelledby="workspace-page-title">
+    <main className={wide ? "workspacePage workspacePageWide" : "workspacePage"} aria-labelledby="workspace-page-title">
       <header className="workspacePageHeader">
         {returnAction && (
           <Button view="flat" size="l" onClick={returnAction.onClick}>

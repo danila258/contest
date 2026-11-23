@@ -3,21 +3,26 @@ import {Button, Card, Dialog, Text} from "@gravity-ui/uikit";
 import {editInProgress} from "./workAccess";
 import {WorkspacePage} from "./WorkspacePage";
 
+import {Facts, WorkSummary} from "./WorkSummary";
+
 function ActivityConditions({item}) {
   if (item.kind === "quiz") {
     return <>
-      <p>Количество попыток — {item.attempts}. Для зачёта нужно правильных ответов: {item.threshold} из {item.questions.length}.</p>
-      {item.timer === "question"
-        ? <div>Время на каждый вопрос:<ol>{item.questions.map(q => <li key={q.id}>{q.minutes} мин.</li>)}</ol></div>
-        : <p>Время на тест — {item.minutes} мин.</p>}
-      <p>{item.back ? "Можно возвращаться к предыдущим вопросам." : "Вопросы проходятся по порядку, без возврата."}
-        {" "}{item.shuffle ? "Варианты ответа перемешиваются." : "Порядок вариантов ответа фиксирован."}</p>
+      <Facts rows={[
+        ["Вопросов",item.questions.length], ["Попыток",item.attempts],
+        ["Для зачёта",`${item.threshold} из ${item.questions.length}`],
+        ["Время",item.timer === "question" ? "На каждый вопрос" : `${item.minutes} мин на тест`],
+        ["Возврат к предыдущим вопросам",item.back ? "Разрешён" : "Отключён"],
+      ]}/>
+      {item.timer === "question" && <ol aria-label="Время на каждый вопрос" className="questionTimes">
+        {item.questions.map((q,index) => <li key={q.id}>Вопрос {index+1} — {q.minutes} мин</li>)}
+      </ol>}
     </>;
   }
-  return <>
-    <p>{item.minutes ? `Время на решение — ${item.minutes} мин.` : "Отдельного ограничения времени на решение нет."}</p>
-    <p>Лимит попыток не задан.</p>
-  </>;
+  return <Facts rows={[
+    ["Время на решение",item.minutes ? `${item.minutes} мин` : "Без ограничения"],
+    ["Лимит попыток","Без ограничения"],
+  ]}/>;
 }
 
 export function WorkStart({work, subject, now, busy, returnAction, onStart}) {
@@ -37,16 +42,21 @@ export function WorkStart({work, subject, now, busy, returnAction, onStart}) {
     <div className="subjectInfo workConditions">
       <Text color="secondary">{subject.title}</Text>
       <h2>Условия прохождения</h2>
-      <p>Сдать до {new Date(work.dueAt).toLocaleString("ru-RU",{dateStyle:"long",timeStyle:"short"})}.</p>
-      {work.activities ? <>
-        {!!work.activities.length && <p>{work.sequential ? "Следующее задание откроется после успешной проверки предыдущего." : "Задания можно выполнять в любом порядке."}
-          {" "}{work.review ? "Для зачёта требуется подтверждение преподавателя." : "Для зачёта нужно успешно выполнить все задания."}</p>}
-        {work.activities.map((item,index) => <Card key={item.id}>
-          <h3>{index+1}. {item.title}</h3>
-          <ActivityConditions item={item}/>
-        </Card>)}
-        {empty && <p>В работе пока нет заданий.</p>}
-      </> : <p>В работе одно задание: {work.question ? "тест" : "задача по программированию"}. Отдельный таймер и лимит попыток не заданы.</p>}
+      <WorkSummary opensAt={work.opensAt} dueAt={work.dueAt} conditions={work.activities?.length ? [
+        work.sequential ? "Задания открываются по порядку после успешной проверки." : "Задания можно выполнять в любом порядке.",
+        work.review ? "Для зачёта требуется подтверждение преподавателя." : "Для зачёта нужно успешно выполнить все задания.",
+      ] : []}/>
+      {work.activities ? work.activities.map((item,index) => <Card key={item.id}>
+        <header className="activitySummaryHeading">
+          <Text color="secondary">{index+1}. {item.kind === "quiz" ? "Тест" : "Задача на программирование"}</Text>
+          <h3>{item.title}</h3>
+        </header>
+        <ActivityConditions item={item}/>
+      </Card>) : <Card>
+        <header className="activitySummaryHeading"><h3>{work.question ? "Тест" : "Задача на программирование"}</h3></header>
+        <Facts rows={[["Время на решение","Без ограничения"],["Лимит попыток","Без ограничения"]]}/>
+      </Card>}
+      {empty && <p>В работе пока нет заданий.</p>}
       {busy && <p role="status">{editInProgress}</p>}
       {expired && <p role="status">Срок сдачи истёк.</p>}
       {error && <p role="alert">{error}</p>}
