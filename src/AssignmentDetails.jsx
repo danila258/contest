@@ -5,7 +5,7 @@ import {WorkspacePage} from "./WorkspacePage";
 import StudentActivity from "./StudentActivity";
 import TeacherActivityPreview from "./TeacherActivityPreview";
 
-import {formatWorkDate, WorkDescription, WorkSummary} from "./WorkSummary";
+import {formatWorkDate, WorkDescription, WorkSubject, WorkSummary} from "./WorkSummary";
 
 export function AssignmentDetails({work, subject, teacher, statistics, activityAttempts, onActivityUpdate, editBlocked, editError, onEdit, onCopy, returnAction}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -30,7 +30,7 @@ export function AssignmentDetails({work, subject, teacher, statistics, activityA
     <Button disabled={Boolean(editBlocked)} view="action" size="l" onClick={onEdit}>Редактировать работу</Button>
   </> : null}>
     <div className={teacher ? "subjectInfo" : "studentWorkBody"}>
-      <Text color="secondary">{subject.title}</Text>
+      <WorkSubject subject={subject}/>
       {teacher ? <WorkSummary opensAt={work.opensAt} dueAt={work.dueAt} conditions={conditions}/> : <>
         <div className="studentDates"><span>Открытие доступа — {formatWorkDate(work.opensAt)}</span><span>Сдать до {formatWorkDate(work.dueAt)}</span></div>
         {conditions.map(condition => <div key={condition}>{condition}</div>)}

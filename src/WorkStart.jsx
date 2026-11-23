@@ -3,7 +3,7 @@ import {Button, Card, Dialog, Text} from "@gravity-ui/uikit";
 import {editInProgress} from "./workAccess";
 import {WorkspacePage} from "./WorkspacePage";
 
-import {Facts, WorkDescription, WorkSummary} from "./WorkSummary";
+import {Facts, WorkDescription, WorkSubject, WorkSummary} from "./WorkSummary";
 
 function ActivityConditions({item}) {
   if (item.kind === "quiz") {
@@ -40,7 +40,7 @@ export function WorkStart({work, subject, now, busy, returnAction, onStart}) {
     <Button view="action" size="xl" disabled={busy || expired || empty || now < Date.parse(work.opensAt)} onClick={() => setConfirming(true)}>Начать работу</Button>
   }>
     <div className="subjectInfo workConditions">
-      <Text color="secondary">{subject.title}</Text>
+      <WorkSubject subject={subject}/>
       <h2>Условия прохождения</h2>
       <WorkSummary opensAt={work.opensAt} dueAt={work.dueAt} conditions={work.activities?.length ? [
         work.sequential ? "Задания открываются по порядку после успешной проверки." : "Задания можно выполнять в любом порядке.",

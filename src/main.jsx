@@ -38,6 +38,7 @@ import {collectTasks, newActivity} from "./activityData";
 import imported from "./imported-data.json";
 import { TaskBank } from "./TaskBank";
 import {editInProgress, withWorkAccess, useWorkBusy} from "./workAccess";
+import {WorkSubject} from "./WorkSummary";
 import {WorkStart} from "./WorkStart";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { AppearanceProvider, AppearanceSettings } from "./Appearance";
@@ -409,9 +410,8 @@ function Workspace({onLogout}) {
             <Card className="quizProgressCard"><Text variant="subheader-2">Задания</Text><Text>1. {active.title}</Text></Card>
           </aside>}
         <div className="activity studentActivityPanel">
-          <small>
-            {subject(active.subject).title} · Сдать до {workDate(active)}
-          </small>
+          <WorkSubject subject={subject(active.subject)}/>
+          <small>Сдать до {workDate(active)}</small>
           <MarkdownContent source={active.question || active.task}/>
           {active.question ? (
             <Select

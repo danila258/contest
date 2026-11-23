@@ -1,7 +1,15 @@
 import React from "react";
 import {Card, Text} from "@gravity-ui/uikit";
 
+import {subjectSelectLabel} from "./semester";
 import MarkdownContent from "./MarkdownContent";
+
+export function WorkSubject({subject}) {
+  return <fieldset className="workSubject">
+    <legend>Предмет</legend>
+    <span>{subjectSelectLabel(subject)}</span>
+  </fieldset>;
+}
 
 export function WorkDescription({description}) {
   if (!description?.trim()) return null;

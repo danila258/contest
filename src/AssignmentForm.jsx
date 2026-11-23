@@ -147,7 +147,7 @@ export function AssignmentForm({copying, initialWork, subject, subjects, initial
     <Button size="xl" view="action" type="submit" extraProps={{form:"assignment-form"}}>{copying ? "Создать копию" : initialWork ? "Сохранить" : "Создать"}</Button>
   </>}>
     <form id="assignment-form" className="subjectForm" onSubmit={submit}>
-      {!initialWork && <JsonImport template="works" onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>}
+      {!initialWork && <JsonImport template="works" help="Если практическая работа уже описана в методичке, перенесите её в форму целиком. Подготовьте файл с одной работой. После загрузки проверьте название, сроки и задания, затем нажмите «Создать»." onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>}
       <fieldset><legend>Предмет</legend>
         {subject ? <span>{subjectSelectLabel(subject)}</span> : <>
           <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId || item.quizId)}

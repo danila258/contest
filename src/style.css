@@ -200,7 +200,7 @@ h2 {
 .subjectTitleInput { width: 100%; }
 .subjectTitleRow { margin: 0; }
 .subjectForm .subjectTitleRow > :first-child { margin-top: -1.55em; align-self: flex-start; background: var(--g-color-base-background); padding-inline: 5px; }
-.subjectForm fieldset, .subjectForm .subjectTitleRow {
+.subjectForm fieldset, .subjectForm .subjectTitleRow, .workSubject {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 16px;
@@ -211,7 +211,8 @@ h2 {
   min-width: 0;
 }
 .subjectForm .subjectTitleRow { flex-wrap: nowrap; gap: 0; margin-top: .65em; }
-.subjectForm legend {
+.subjectForm legend, .workSubject legend {
+  font-weight: 500;
   padding: 0 5px;
 }
 
@@ -228,6 +229,9 @@ h2 {
 }
 .workspacePage.workspacePageWide { --page-gutter: clamp(16px, 2vw, 36px); }
 .studentWorkBody { display: grid; gap: 8px; }
+.workSubject {
+  overflow-wrap: anywhere;
+}
 .studentDates { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .studentWorkBody > .studentAssignment { margin-top: 12px; }
 .studentAssignment {
@@ -342,7 +346,6 @@ h2 {
 }
 .subjectAccess > .teacherAccess { grid-column: 1 / -1; }
 .subjectForm { gap: 24px; }
-.subjectForm legend { font-weight: 500; }
 @media (max-width: 620px) {
   .subjectAccess { grid-template-columns: minmax(0, 1fr); }
   .workspacePageActions > button { flex: 1; }

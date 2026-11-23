@@ -1,7 +1,16 @@
 import React, {useRef, useState} from "react";
-import {Button, Dialog} from "@gravity-ui/uikit";
+import {Button, Dialog, HelpMark} from "@gravity-ui/uikit";
 
-export function JsonImport({template, onImport, successMessage, importLabel = "Импортировать JSON"}) {
+const importHelp = {
+  subjects: "Если вы готовите несколько предметов к новому семестру, их можно добавить одним файлом. Для каждого укажите название, семестр и учебный год.",
+  works: "Если у вас есть план практических работ на семестр, перенесите в шаблон названия, сроки и задания. Все работы из файла появятся в списке за одну загрузку.",
+  tasks: "Если у вас есть подборка задач или теоретических вопросов из методички, загрузите её в банк одним файлом. Материалы сохранятся в банке указанных предметов.",
+  activities: "Если часть работы уже собрана, а ещё несколько заданий подготовлены отдельно, загрузите их одним файлом. Задания добавятся в конец работы в порядке из файла.",
+  quiz: "Если вопросы и варианты ответов уже готовы, загрузите их вместе. Один тест из файла заменит текущий тест в форме. Проверьте, какие ответы отмечены как правильные.",
+  program: "Если условие задачи, начальный код и проверки уже подготовлены, загрузите их вместе. Одна задача из файла заменит текущую задачу в форме.",
+};
+
+export function JsonImport({template, help = importHelp[template], onImport, successMessage, importLabel = "Импортировать JSON"}) {
   const trigger = useRef(null);
   const input = useRef(null);
   const [message,setMessage] = useState(null);
@@ -28,6 +37,14 @@ export function JsonImport({template, onImport, successMessage, importLabel = "�
     <div className="assignmentControls">
       <Button href={`/${template}-template.json`} extraProps={{download:`${template}-template.json`}}>Скачать шаблон JSON</Button>
       <Button ref={trigger} loading={loading} onClick={() => input.current.click()}>{importLabel}</Button>
+      <HelpMark aria-label="Как работает импорт JSON">
+        <p>{help}</p>
+        <ol>
+          <li>Нажмите «Скачать шаблон JSON».</li>
+          <li>Замените примеры своими материалами. Для объёмных материалов рекомендуем передать шаблон и текст ИИ с просьбой заполнить поля и сохранить структуру файла.</li>
+          <li>Проверьте данные, сохраните файл с расширением .json и выберите его кнопкой «{importLabel}».</li>
+        </ol>
+      </HelpMark>
       <input ref={input} hidden type="file" accept=".json,application/json" onChange={upload}/>
     </div>
     {message && <p role="status">{message}</p>}
