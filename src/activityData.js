@@ -23,19 +23,19 @@ export function newActivity(kind) {
 export function collectTasks(works) {
   const tasks = new Map();
   for (const demo of demos.filter(work => work.task)) {
-    tasks.set(demo.id, {...newActivity("program"), id:demo.id, title:demo.title, prompt:demo.task, subject:demo.subject});
+    tasks.set(demo.id, {...newActivity("program"), id:demo.id, title:demo.title, prompt:demo.task});
   }
   for (const work of works) {
     for (const item of work.activities ?? []) {
       if (item.kind !== "program") continue;
       const id = item.taskId ?? item.id;
-      if (!tasks.has(id)) tasks.set(id, {...item, id, subject:work.subject});
+      if (!tasks.has(id)) tasks.set(id, {...item, id});
     }
   }
   return [...tasks.values()];
 }
 
-// An embedded quiz belongs to its work until copying gives it a bank record.
+// Older snapshots can identify a quiz by its original work and activity IDs.
 export function worksUsingActivity(works, item, ownerId, bankQuizzes) {
   const isQuiz = item.kind === "quiz";
   const promotedQuiz = isQuiz && ownerId && bankQuizzes.find(quiz => quiz.sourceWorkId === ownerId && quiz.sourceActivityId === item.id);
@@ -55,4 +55,57 @@ export function worksUsingActivity(works, item, ownerId, bankQuizzes) {
         (quiz?.sourceWorkId === work.id && quiz.sourceActivityId === activity.id);
     });
   });
+}
+
+// Recover embedded materials when opening older browser libraries. Work and attempt IDs stay stable.
+export function registerWorkMaterials(library) {
+  const withoutSubject = ({subject, ...record}) => record;
+  const tasks = new Map(library.tasks.map(row => [row.id,withoutSubject(row)]));
+  const questions = new Map(library.questions.map(row => [row.id,withoutSubject(row)]));
+  const works = library.works.map(work => {
+    if (!work.activities) return work;
+    const activities = work.activities.map(raw => {
+      if (!raw.kind) return raw;
+      const item = withoutSubject(raw);
+      if (item.kind === "program") {
+        const taskId = item.taskId ?? item.id;
+        if (!tasks.has(taskId)) {
+          const {taskId:link, ...record} = item;
+          tasks.set(taskId,{...record,id:taskId});
+        }
+        return {...item,taskId};
+      }
+      const promoted = !item.quizId && [...questions.values()].find(q =>
+        q.sourceWorkId === work.id && q.sourceActivityId === item.id);
+      let quizId = item.quizId ?? promoted?.id ?? item.id;
+      if (!item.quizId && !promoted) {
+        while (questions.has(quizId)) quizId = work.id + "/" + quizId;
+      }
+      if (!questions.has(quizId)) {
+        const {quizId:link, ...record} = item;
+        questions.set(quizId,{...record,id:quizId,taskIds:[],sourceWorkId:work.id,sourceActivityId:item.id});
+      }
+      return {...item,quizId};
+    });
+    return {...work,activities};
+  });
+  return {...library,tasks:[...tasks.values()],questions:[...questions.values()],works};
+}
+
+function demoQuiz(work) {
+  return {...newActivity("quiz"),id:work.id,title:work.title,taskIds:[],sourceWorkId:work.id,sourceActivityId:work.id,
+    questions:[{id:work.id,minutes:"5",prompt:work.question,answers:work.answers.map((text,i) =>
+      ({id:String(i),text,correct:text === work.correct}))}]};
+}
+
+export function withDemoQuizzes(library) {
+  const questions = [...library.questions];
+  for (const demo of demos.filter(w => w.question)) {
+    if (!questions.some(q => q.sourceWorkId === demo.id && q.sourceActivityId === demo.id)) {
+      const quiz = demoQuiz(demo);
+      while (questions.some(row => row.id === quiz.id)) quiz.id = "demo/" + quiz.id;
+      questions.push(quiz);
+    }
+  }
+  return registerWorkMaterials({...library,questions});
 }

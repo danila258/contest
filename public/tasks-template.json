@@ -1,8 +1,7 @@
 {
-  "_comment": "For AI agents: supply tasks, questions, or both. Each row may set subject to an accessible subject ID (cpp is the built-in C++ course); otherwise the selected subject filter is used. The UI assigns ids automatically. JSON import also generates a UUID for each task or theory question if its id is omitted. Give a task an explicit id when a work will attach it via taskId or a theory question will reference it in taskIds. For example, json-sum below can be used in either link. Use title and Markdown prompt. mode=stdout uses main.cpp and cases with input/output strings; mode=unit accepts main.cpp, task_name.cpp, task_name.h and cases with C++ code. reference is the literal reference solution, minutes is a positive solving-time limit or an empty string, logs is boolean. Each check is off, warn or block. Theory questions use taskIds from the same subject, including tasks created in this file; [] applies to the whole subject. Import creates records atomically and rejects duplicate ids. Defaults: logs=false, format=block, static=warn, dynamic=warn. Use mode=none for a program without tests; omit cases or use an empty array.",
+  "_comment": "For AI agents: supply tasks, questions, or both. Bank materials are shared across courses. Omit subject. The UI assigns ids automatically. JSON import also generates a UUID for each task or theory question if its id is omitted. Give a task an explicit id when a work will attach it via taskId or a theory question will reference it in taskIds. For example, json-sum below can be used in either link. Use title and Markdown prompt. mode=stdout uses main.cpp and cases with input/output strings; mode=unit accepts main.cpp, task_name.cpp, task_name.h and cases with C++ code. reference is the literal reference solution, minutes is a positive solving-time limit or an empty string, logs is boolean. Each check is off, warn or block. Theory questions use taskIds from the shared bank, including tasks created in this file; [] leaves the question unlinked. Import creates records atomically and rejects duplicate ids. Defaults: logs=false, format=block, static=warn, dynamic=warn. Use mode=none for a program without tests; omit cases or use an empty array.",
   "tasks": [{
     "id": "json-sum",
-    "subject": "cpp",
     "title": "Сумма двух чисел",
     "prompt": "Считайте два целых числа и выведите их **сумму**.",
     "mode": "stdout",
@@ -13,12 +12,12 @@
     "logs": false,
     "checks": {"format":"block","static":"warn","dynamic":"warn"}
   },{
-    "id":"json-square", "subject":"cpp", "title":"Квадрат числа", "prompt":"Реализуйте функцию square.",
+    "id":"json-square", "title":"Квадрат числа", "prompt":"Реализуйте функцию square.",
     "mode":"unit", "sources":{"main.cpp":"int main() {}","task_name.h":"int square(int x);","task_name.cpp":"#include \"task_name.h\""},
     "cases":[{"code":"#include \"task_name.h\"\n#include <cassert>\nint main() { assert(square(3) == 9); }"}]
   }],
   "questions": [{
-    "id":"json-types","subject":"cpp","title":"Тип результата","prompt":"Когда результат вычисления не помещается в тип int?",
+    "id":"json-types","title":"Тип результата","prompt":"Когда результат вычисления не помещается в тип int?",
     "taskIds":["json-sum","json-square"]
   }]
 }

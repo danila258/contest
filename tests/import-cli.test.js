@@ -45,7 +45,7 @@ test("CLI imports linked files atomically and releases the lock after failure", 
   const saved = await readFile(seed,"utf8");
   const db = JSON.parse(saved);
   assert.equal(db.subjects[0].id,"course");
-  assert.equal(db.tasks[0].subject,"course");
+  assert.ok(!Object.hasOwn(db.tasks[0],"subject"));
   assert.deepEqual(db.questions[0].taskIds,["task"]);
   assert.equal(db.works[0].activities[0].taskId,"task");
   const retry = run();

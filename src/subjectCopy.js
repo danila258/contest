@@ -4,11 +4,6 @@ import {newActivity} from "./activityData.js";
 
 export const bankIdOf = subject => subject?.bankId ?? subject?.id;
 
-export function subjectOptionTitle(subject, subjects) {
-  return subjects.some(other => other.id !== subject.id && other.title === subject.title)
-    ? `${subject.title} · ${academicYearOf(subject) ?? "Год не указан"}` : subject.title;
-}
-
 // Keep local clock time. February 29 becomes February 28 in a non-leap year.
 function shiftYear(value, years) {
   const date = new Date(value);
@@ -58,8 +53,8 @@ export function copySubjectLibrary(current, source, target, demos) {
       if (item.quizId) return {id,quizId:item.quizId};
       if (item.kind === "quiz") return {...structuredClone(item),id};
       const taskId = item.taskId ?? item.id;
-      if (!current.tasks.some(task => task.id === taskId && task.subject === bankId)) {
-        throw Error(`Задача «${item.title ?? work.title}» отсутствует в банке предмета.`);
+      if (!current.tasks.some(task => task.id === taskId)) {
+        throw Error(`Задача «${item.title ?? work.title}» отсутствует в банке.`);
       }
       return {id,taskId};
     });
@@ -74,7 +69,7 @@ export function copySubjectLibrary(current, source, target, demos) {
 }
 
 // Embedded quizzes from older works acquire one bank record on the first copy.
-export function copyWorkLibrary(current, source, settings, bankId) {
+export function copyWorkLibrary(current, source, settings) {
   const questions = [...current.questions];
   const activities = source.activities.map(item => {
     if (item.kind === "quiz") {
@@ -82,15 +77,15 @@ export function copyWorkLibrary(current, source, settings, bankId) {
         ? questions.find(row => row.id === item.quizId)
         : questions.find(row => row.sourceWorkId === source.id && row.sourceActivityId === item.id);
       if (!quiz && !item.quizId) {
-        quiz = {...item,id:newId(),subject:bankId,taskIds:[],sourceWorkId:source.id,sourceActivityId:item.id};
+        quiz = {...item,id:newId(),taskIds:[],sourceWorkId:source.id,sourceActivityId:item.id};
         questions.push(quiz);
       }
-      if (quiz?.kind !== "quiz" || quiz.subject !== bankId) throw Error("Тест отсутствует в банке предмета.");
+      if (quiz?.kind !== "quiz") throw Error("Тест отсутствует в банке.");
       return {id:newId(),quizId:quiz.id};
     }
     const taskId = item.taskId ?? item.id;
-    if (!current.tasks.some(task => task.id === taskId && task.subject === bankId)) {
-      throw Error("Задача отсутствует в банке предмета.");
+    if (!current.tasks.some(task => task.id === taskId)) {
+      throw Error("Задача отсутствует в банке.");
     }
     return {id:newId(),taskId};
   });

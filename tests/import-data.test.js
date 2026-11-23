@@ -5,7 +5,7 @@ import {readBank, readSubjects, readWorks, readWorkDraft, readActivityDrafts} fr
 import {currentSemester} from "../src/semester.js";
 import {demoTeacher, demoStudent, studentHasAccess} from "../src/subjectOptions.js";
 import {subjects, works as demos} from "../src/data.js";
-import {collectTasks, newActivity} from "../src/activityData.js";
+import {collectTasks, newActivity, registerWorkMaterials} from "../src/activityData.js";
 
 function template(name) {
   return JSON.parse(readFileSync(new URL(`../public/${name}-template.json`, import.meta.url), "utf8"));
@@ -43,7 +43,7 @@ test("subjects retain cover, access and Markdown fields, and always include the 
 
 test("bank template preserves both check modes, sources, reference and theory links", () => {
   const data = template("tasks");
-  const {tasks, questions} = readBank(data, subjects, null, library());
+  const {tasks, questions} = readBank(data, library());
   for (const [index, task] of tasks.entries()) {
     const row = data.tasks[index];
     assert.deepEqual(task.sources, row.sources);
@@ -61,18 +61,35 @@ test("bank template preserves both check modes, sources, reference and theory li
   assert.deepEqual(questions[0], {...data.questions[0], kind:"theory"});
 });
 
-test("legacy bank files accept the selected subject; explicit foreign links are rejected", () => {
-  const row = {title:"Задача", prompt:"Условие", cases:[{input:"", output:"1"}]};
+test("materials are global, including older JSON with a subject", () => {
   const bank = library();
-  const data = {tasks:[row]};
-  const [task] = readBank(data, subjects, "cpp", bank).tasks;
-  assert.equal(task.subject, "cpp");
-  assert.ok(task.id);
-  assert.throws(() => readBank(data, subjects, "", bank), /tasks\.0\.subject/);
-  const question = {title:"Вопрос", prompt:"Условие", subject:"alg", taskIds:["arrays"]};
-  assert.throws(() => readBank({questions:[question]}, subjects, "cpp", bank), /questions\.0\.taskIds/);
-  assert.equal(readBank({questions:[{...question, taskIds:[]}]}, subjects, "cpp", bank).questions[0].subject, "alg");
-  assert.throws(() => readBank({tasks:[{...row,mode:"unit"}]}, subjects, "cpp", bank), /tasks\.0\.cases/);
+  const row = {title:"Задача",prompt:"Условие"};
+  const {tasks,questions} = readBank({tasks:[row],questions:[{...row,subject:"alg",taskIds:["arrays"]}]},bank);
+  assert.ok(tasks[0].id);
+  assert.ok(!Object.hasOwn(tasks[0],"subject"));
+  assert.ok(!Object.hasOwn(questions[0],"subject"));
+  assert.deepEqual(questions[0].taskIds,["arrays"]);
+  assert.throws(() => readBank({questions:[{...row,taskIds:["missing"]}]},bank), /questions\.0\.taskIds/);
+});
+
+test("existing works contribute reusable bank entries and keep their activity IDs on reload", () => {
+  const quiz = newActivity("quiz");
+  const task = {...newActivity("program"),subject:"cpp"};
+  const works = [{id:"w",subject:"cpp",activities:[task,quiz]}];
+  const migrated = registerWorkMaterials({works,tasks:[],questions:[]});
+  assert.deepEqual(registerWorkMaterials(migrated),migrated);
+  const [program,test] = migrated.works[0].activities;
+  assert.equal(program.id,task.id);
+  assert.equal(test.id,quiz.id);
+  assert.equal(program.taskId,migrated.tasks[0].id);
+  assert.equal(test.quizId,migrated.questions[0].id);
+  assert.ok(!Object.hasOwn(migrated.tasks[0],"subject"));
+  const [work] = template("works").works;
+  const other = {...subjects.find(s => s.id === work.subject),id:"another"};
+  const imported = readWorks({works:[{...work,subject:other.id,activities:[{taskId:program.taskId},{quizId:test.quizId}]}]},[other],null,migrated,[]);
+  assert.deepEqual(imported.tasks,[]);
+  assert.deepEqual(imported.questions,[]);
+  assert.equal(imported.works[0].activities[1].quizId,test.quizId);
 });
 
 test("work template imports ordered quiz, bank snapshot and inline task with local deadlines", () => {
@@ -92,7 +109,7 @@ test("work template imports ordered quiz, bank snapshot and inline task with loc
   assert.equal(linked.taskId, row.activities[1].taskId);
   assert.notEqual(linked.id, linked.taskId);
   assert.equal(inline.taskId, inlineTask.id);
-  assert.equal(inline.subject, row.subject);
+  assert.ok(!Object.hasOwn(inline,"subject"));
 });
 
 for (const [name, change] of [
@@ -104,7 +121,7 @@ for (const [name, change] of [
   ["unreachable threshold", w => {w.activities[0].threshold = 2;}],
   ["no correct answer", w => {w.activities[0].questions[0].answers.forEach(a => {a.correct = false;});}],
   ["duplicate attachment", w => {w.activities.push(w.activities[1]);}],
-  ["wrong subject for attached task", w => {w.subject = "alg";}],
+  ["unknown bank task", w => {w.activities[1].taskId = "missing";}],
   ["unknown field", w => {w.deadline = w.dueAt;}],
 ]) {
   test(`work import rejects ${name}`, () => {
@@ -123,11 +140,11 @@ const recordsWithoutId = [
   },
   {
     path:"tasks.0.id",
-    importRow:fields => readBank({tasks:[{title:"Задача", prompt:"Условие", ...fields}]}, subjects, "cpp", library()).tasks[0],
+    importRow:fields => readBank({tasks:[{title:"Задача", prompt:"Условие", ...fields}]}, library()).tasks[0],
   },
   {
     path:"questions.0.id",
-    importRow:fields => readBank({questions:[{title:"Вопрос", prompt:"Почему?", ...fields}]}, subjects, "cpp", library()).questions[0],
+    importRow:fields => readBank({questions:[{title:"Вопрос", prompt:"Почему?", ...fields}]}, library()).questions[0],
   },
   {
     path:"works.0.id",
@@ -183,30 +200,30 @@ test("a JSON draft preserves the work ID, editable inline tasks and attached ban
 
 test("activity import appends editable quizzes and tasks in file order using fresh IDs", () => {
   const data = template("activities");
-  const items = readActivityDrafts(data,"cpp");
+  const items = readActivityDrafts(data);
   assert.deepEqual(items.map(item => item.kind), ["quiz","program"]);
-  assert.equal(items[1].subject,"cpp");
+  assert.ok(!Object.hasOwn(items[1],"subject"));
   assert.equal(items[1].reference,data.activities[1].reference);
   for (const kind of ["quiz","program"]) {
-    const [item] = readActivityDrafts(template(kind),"cpp",kind);
+    const [item] = readActivityDrafts(template(kind),kind);
     assert.equal(item.kind,kind);
     assert.notEqual(item.id,items.find(entry => entry.kind === kind).id);
   }
-  assert.throws(() => readActivityDrafts(data,"cpp","quiz"), /одним тестом/);
-  assert.throws(() => readActivityDrafts(template("quiz"),"cpp","program"), /одной задачей/);
+  assert.throws(() => readActivityDrafts(data,"quiz"), /одним тестом/);
+  assert.throws(() => readActivityDrafts(template("quiz"),"program"), /одной задачей/);
   data.activities[1].cases = [{code:"invalid for stdout"}];
-  assert.throws(() => readActivityDrafts(data,"cpp"), /activities\.1\.cases/);
+  assert.throws(() => readActivityDrafts(data), /activities\.1\.cases/);
 });
 
 test("programs without tests accept omitted or empty cases and reject supplied tests", () => {
   const task = {title:"Практика", prompt:"Напишите программу", mode:"none"};
-  const bank = readBank({tasks:[task]},subjects,"cpp",library());
+  const bank = readBank({tasks:[task]},library());
   assert.deepEqual(bank.tasks[0].cases, []);
-  const [item] = readActivityDrafts({activities:[{kind:"program",...task,cases:[]}]},"cpp");
+  const [item] = readActivityDrafts({activities:[{kind:"program",...task,cases:[]}]});
   assert.equal(item.mode,"none");
   assert.deepEqual(item.cases,[]);
   for (const [mode,cases] of [["none",[{input:"",output:""}]],["unit",[]],["stdout",[]]]) {
-    assert.throws(() => readBank({tasks:[{...task,mode,cases}]},subjects,"cpp",library()),/tasks\.0\.cases/);
+    assert.throws(() => readBank({tasks:[{...task,mode,cases}]},library()),/tasks\.0\.cases/);
   }
 });
 

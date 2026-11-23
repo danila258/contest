@@ -1,7 +1,7 @@
 import {readFile, writeFile, open, rename, unlink} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {readSubjects, readBank, readWorks} from "../src/importData.js";
-import {collectTasks} from "../src/activityData.js";
+import {collectTasks, withDemoQuizzes} from "../src/activityData.js";
 import {subjects, works} from "../src/data.js";
 
 async function main(paths) {
@@ -17,7 +17,7 @@ async function main(paths) {
       try {
         const data = JSON.parse((await readFile(path,"utf8")).replace(/^\uFEFF/,""));
         const available = [...subjects,...seed.subjects];
-        const bank = {...seed,tasks:[...collectTasks([]),...seed.tasks]};
+        const bank = withDemoQuizzes({...seed,tasks:[...collectTasks([]),...seed.tasks]});
         if (data?.subjects) {
           const added = readSubjects(data,available);
           seed.subjects.push(...added);
@@ -26,9 +26,10 @@ async function main(paths) {
           const added = readWorks(data,available,null,bank,works);
           seed.works.push(...added.works);
           seed.tasks.push(...added.tasks);
+          seed.questions.push(...added.questions);
           count += added.works.length;
         } else {
-          const added = readBank(data,available,null,bank);
+          const added = readBank(data,bank);
           seed.tasks.push(...added.tasks);
           seed.questions.push(...added.questions);
           count += added.tasks.length + added.questions.length;

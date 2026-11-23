@@ -31,12 +31,12 @@ test("copy a course and copy it again without creating bank tasks or inheriting 
   assert.equal(again.tasks.length,1);
 });
 
-test("shared bank links work in JSON import and remain scoped to the course",()=>{
+test("shared bank links work in JSON import across independent courses",()=>{
   const data={works:[{title:"Импорт",subject:target.id,opensAt:"2028-09-01T09:00",dueAt:"2029-05-01T10:00",activities:[{taskId:task.id}]}]};
   assert.equal(readWorks(data,[target],target.id,original,[]).works[0].activities[0].taskId,task.id);
-  assert.throws(()=>readWorks(data,[{...target,bankId:"other"}],target.id,original,[]),/отсутствует/);
-  const added=readBank({tasks:[{title:"Новая",prompt:"Условие"}]},[target],target.id,original);
-  assert.equal(added.tasks[0].subject,source.id);
+  assert.equal(readWorks(data,[{...target,bankId:"other"}],target.id,original,[]).works[0].activities[0].taskId,task.id);
+  const added=readBank({tasks:[{title:"Новая",prompt:"Условие"}]},original);
+  assert.ok(!Object.hasOwn(added.tasks[0],"subject"));
 });
 
 test("assignment copies reuse both bank materials across repeated and nested copies", () => {

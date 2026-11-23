@@ -7,7 +7,6 @@ import {dateTime} from "@gravity-ui/date-utils";
 import {FormRow} from "@gravity-ui/components";
 import {readActivityDrafts} from "./importData";
 import {savedActivity} from "./activityData";
-import {bankIdOf} from "./subjectCopy";
 import {JsonImport} from "./JsonImport";
 import {WorkspacePage} from "./WorkspacePage";
 import TeacherActivityPreview from "./TeacherActivityPreview";
@@ -74,7 +73,6 @@ export function AssignmentForm({renderActivityWorks, copying, initialWork, subje
   const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
   const chosenSubject = subjects.find(s => s.id === subjectId);
   const range = scheduleRange(chosenSubject);
-  const availableTasks = bankTasks.filter(task => task.subject === bankIdOf(chosenSubject));
   const [title,setTitle] = useState(copying ? initialWork.title + " (копия)" : initialWork?.title ?? "");
   const [description,setDescription] = useState(initialWork?.description ?? "");
   const [importRevision,setImportRevision] = useState(0);
@@ -150,9 +148,8 @@ export function AssignmentForm({renderActivityWorks, copying, initialWork, subje
       {!initialWork && <JsonImport template="works" help="Если практическая работа уже описана в методичке, перенесите её в форму целиком. Подготовьте файл с одной работой. После загрузки проверьте название, сроки и задания, затем нажмите «Создать»." onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>}
       <fieldset><legend>Предмет</legend>
         {subject ? <span>{subjectSelectLabel(subject)}</span> : <>
-          <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId || item.quizId)}
+          <Select aria-label="Предмет работы" filterable value={[subjectId]}
           options={subjects.map(s => ({value:s.id, content:subjectSelectLabel(s)}))} onUpdate={([id]) => changeSubject(id)}/>
-          {items.some(item => item.taskId || item.quizId) && <span>Чтобы сменить предмет, отсоедините задания из его банка.</span>}
         </>}
       </fieldset>
       <FormRow className="subjectTitleRow" direction="column" label="Название работы" fieldId="assignment-title" required>
@@ -174,7 +171,7 @@ export function AssignmentForm({renderActivityWorks, copying, initialWork, subje
       <h2>Задания</h2>
       {copying ? <ol>{items.map(item => <li key={item.id}>{item.title}</li>)}</ol> : <>
       <JsonImport template="activities" importLabel="Добавить задания из JSON" onImport={data => {
-        const added = readActivityDrafts(data,subjectId);
+        const added = readActivityDrafts(data);
         setItems(previous => [...previous,...added]);
         return added.length;
       }}/>
@@ -190,7 +187,7 @@ export function AssignmentForm({renderActivityWorks, copying, initialWork, subje
         {!item.taskId && !item.quizId && <JsonImport template={item.kind}
           importLabel={item.kind === "quiz" ? "Заполнить тест из JSON" : "Заполнить задачу из JSON"}
           onImport={data => {
-            const [replacement] = readActivityDrafts(data,subjectId,item.kind);
+            const [replacement] = readActivityDrafts(data,item.kind);
             setItems(previous => previous.map(entry => entry.id === item.id ? replacement : entry));
             return 1;
           }}/>}
@@ -200,13 +197,13 @@ export function AssignmentForm({renderActivityWorks, copying, initialWork, subje
         </Disclosure></> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}
       <Select aria-label="Прикрепить задачу из банка" placeholder="Прикрепить задачу из банка" filterable value={[]}
-        options={availableTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
+        options={bankTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
         onUpdate={([id]) => {
-          const task = availableTasks.find(entry => entry.id === id);
+          const task = bankTasks.find(entry => entry.id === id);
           if (task) setItems([...items, {...task, taskId:id, id:newId()}]);
         }}/>
       <Select aria-label="Прикрепить тест из банка" placeholder="Прикрепить тест из банка" filterable value={[]}
-        options={bankQuizzes.filter(quiz => quiz.kind === "quiz" && quiz.subject === bankIdOf(chosenSubject)).map(quiz =>
+        options={bankQuizzes.filter(quiz => quiz.kind === "quiz").map(quiz =>
           ({value:quiz.id,content:quiz.title,disabled:items.some(item => item.quizId === quiz.id)}))}
         onUpdate={([id]) => {
           const quiz = bankQuizzes.find(row => row.id === id);

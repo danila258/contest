@@ -9,7 +9,7 @@ export function CatalogueTable({label, rows, onOpen, icon, subjectLabel, columns
         <button type="button" className="catalogueTitle">
           <Icon data={icon(row)}/>{row.title}
         </button>
-        <Text variant="caption-2" color="secondary">{subjectLabel(row)}</Text>
+        {subjectLabel && <Text variant="caption-2" color="secondary">{subjectLabel(row)}</Text>}
         {details?.(row)}
       </div>},
       ...columns,

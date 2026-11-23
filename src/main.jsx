@@ -34,7 +34,7 @@ import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
 import {ActivityWorks} from "./ActivityWorks";
-import {collectTasks, newActivity, worksUsingActivity} from "./activityData";
+import {collectTasks, withDemoQuizzes, newActivity, registerWorkMaterials, worksUsingActivity} from "./activityData";
 import imported from "./imported-data.json";
 import {CatalogueTable} from "./CatalogueTable";
 import { TaskBank } from "./TaskBank";
@@ -62,7 +62,7 @@ function withImportedData(local) {
     const ids = new Set(local[key].map(row => row.id));
     merged[key] = [...imported[key].filter(row => !ids.has(row.id)),...local[key]];
   }
-  return merged;
+  return withDemoQuizzes(merged);
 }
 
 const CodeEditor = React.lazy(() => import("./CodeEditor"));
@@ -145,7 +145,7 @@ function Workspace({onLogout}) {
   const bank = React.useMemo(() => withImportedData(library ?? initialLibrary), [library, initialLibrary]);
   function updateLibrary(change) {
     const stored = localStorage.getItem("practice.library");
-    saveLibrary(change(stored ? withImportedData(JSON.parse(stored)) : bank));
+    saveLibrary(registerWorkMaterials(change(stored ? withImportedData(JSON.parse(stored)) : bank)));
   }
   const [datedDemoWorks] = useState(() => demoWorks.map(work => {
     const due = deadline(work.day);
@@ -156,10 +156,10 @@ function Workspace({onLogout}) {
   const [editableDemos] = useState(() => datedDemoWorks.map(work => {
     const opens = new Date(work.dueAt);
     opens.setDate(opens.getDate() - 14);
-    const activity = work.question ? newActivity("quiz") : bank.tasks.find(item => item.id === work.id) ?? {...newActivity("program"), id:work.id, title:work.title, prompt:work.task};
-    const item = work.question ? {...activity, id:work.id, title:work.title, questions:[{...activity.questions[0],
-      prompt:work.question, answers:work.answers.map((text,i) => ({id:String(i),text,correct:text === work.correct}))}]}
-      : {...activity,taskId:activity.id};
+    const activity = work.question
+      ? bank.questions.find(q => q.sourceWorkId === work.id && q.sourceActivityId === work.id)
+      : bank.tasks.find(item => item.id === work.id) ?? {...newActivity("program"),id:work.id,title:work.title,prompt:work.task};
+    const item = work.question ? {...activity,id:work.id,quizId:activity.id} : {...activity,taskId:activity.id};
     return {...work, opensAt:opens.toISOString(), activities:[item]};
   }));
   const teacher = role === "Преподаватель";
@@ -302,7 +302,7 @@ function Workspace({onLogout}) {
   function saveSubject(settings) {
     if (settingsOpen === "copy") {
       const copy = {...settings,id:newId(),teacher:demoTeacher,bankId:bankIdOf(selected)};
-      updateLibrary(current => copySubjectLibrary(current,selected,copy,datedDemoWorks.filter(w => !current.works.some(saved => saved.id === w.id))));
+      updateLibrary(current => copySubjectLibrary(current,selected,copy,editableDemos.filter(w => !current.works.some(saved => saved.id === w.id))));
       showSettings(false);
       go("Предметы",copy);
       return;
@@ -329,7 +329,7 @@ function Workspace({onLogout}) {
           const original = current.works.find(row => row.id === active.id);
           const latest = original ? resolveWorkTasks(original,current.tasks,null,current.questions) : active;
           if (JSON.stringify(latest) !== JSON.stringify(active)) throw Error("Исходная работа изменилась. Откройте форму копирования заново.");
-          const next = copyWorkLibrary(current,latest,work,workBankId);
+          const next = copyWorkLibrary(current,latest,work);
           copy = resolveWorkTasks(next.works.at(-1),next.tasks,null,next.questions);
           return next;
         });
@@ -337,11 +337,8 @@ function Workspace({onLogout}) {
         open(copy);
         return;
       }
-      const newTasks = work.activities.filter(item => item.kind === "program" && !item.taskId)
-        .map(item => ({...item, subject:workBankId}));
-      const activities = work.activities.map(item => item.kind === "program"
-        ? {...item, taskId:item.taskId ?? item.id} : item);
-      const saved = {...active,...work,activities};
+      const saved = {...active,...work};
+      let registeredWork;
       updateLibrary(current => {
         const existing = current.works.find(w => w.id === work.id);
         if (active && JSON.stringify(existing ? resolveWorkTasks(existing,current.tasks,null,current.questions) : editableDemos.find(w => w.id === work.id)) !== JSON.stringify(active)) {
@@ -353,10 +350,12 @@ function Workspace({onLogout}) {
           const storedStarts = JSON.parse(localStorage.getItem("practice.starts")) ?? {};
           saveStarts({...storedStarts,[work.id]:{startedAt:starts[work.id]?.startedAt ?? starts[work.id],work:previous}});
         }
-        const record = workBankId !== work.subject || saved.usesBankReferences ? referenceWorkTasks(saved) : saved;
-        return {...current, tasks:[...current.tasks,...newTasks], works:existing ? current.works.map(w => w.id === work.id ? record : w) : [...current.works,record]};
+        const additions = registerWorkMaterials({...current,works:[saved]});
+        [registeredWork] = additions.works;
+        const record = workBankId !== work.subject || saved.usesBankReferences ? referenceWorkTasks(registeredWork) : registeredWork;
+        return {...additions, works:existing ? current.works.map(w => w.id === work.id ? record : w) : [...current.works,record]};
       });
-      if (active) open(saved);
+      if (active) open(registeredWork);
       if (!active && catalogue) {
         if (workSubject) setWorkSubject(work.subject);
         setWorkQuery("");
@@ -373,8 +372,9 @@ function Workspace({onLogout}) {
         const time = Date.now();
         setNow(time);
         const storedLibrary = JSON.parse(localStorage.getItem("practice.library"));
-        const latest = storedLibrary?.works.find(w => w.id === active.id);
-        if (latest && JSON.stringify(resolveWorkTasks(latest,withImportedData(storedLibrary).tasks,null,withImportedData(storedLibrary).questions)) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
+        const storedBank = storedLibrary && withImportedData(storedLibrary);
+        const latest = storedBank?.works.find(w => w.id === active.id);
+        if (latest && JSON.stringify(resolveWorkTasks(latest,storedBank.tasks,null,storedBank.questions)) !== JSON.stringify(active)) throw new Error("Условия работы изменились. Ознакомьтесь с ними перед началом.");
         if (time < Date.parse(active.opensAt)) throw new Error("Время открытия работы ещё не наступило.");
         if (time >= deadlineOf(active) || active.activities?.length === 0) return;
         const saved = JSON.parse(localStorage.getItem("practice.starts")) ?? starts;
@@ -554,7 +554,7 @@ function Workspace({onLogout}) {
     </WorkspaceNavigation>
   );
   if (teacher && page === "Банк задач и тестов") {
-    return <TaskBank linkedWorks={linkedWorks} renderActivityWorks={renderActivityWorks} subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
+    return <TaskBank subjects={all} linkedWorks={linkedWorks} renderActivityWorks={renderActivityWorks} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
   }
   if (catalogue) {
     return renderWorkspace(<article className="bankPage">
@@ -574,7 +574,7 @@ function Workspace({onLogout}) {
           const added = readWorks(data,all,workSubject,current,demoWorks);
           count = added.works.length;
           const records = added.works.map(w => bankIdOf(subject(w.subject)) === w.subject ? w : referenceWorkTasks(w));
-          return {...current, works:[...current.works,...records], tasks:[...current.tasks,...added.tasks]};
+          return {...current, works:[...current.works,...records], tasks:[...current.tasks,...added.tasks],questions:[...current.questions,...added.questions]};
         });
         setNow(Date.now());
         return count;
