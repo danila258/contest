@@ -69,7 +69,7 @@ function localSchedule(instant) {
   return {date:local.format("YYYY-MM-DD"), time:local.format("HH:mm")};
 }
 
-export function AssignmentForm({copying, initialWork, subject, subjects, initialSubjectId, bankTasks, bankQuizzes, onImport, onClose, onSave}) {
+export function AssignmentForm({renderActivityWorks, copying, initialWork, subject, subjects, initialSubjectId, bankTasks, bankQuizzes, onImport, onClose, onSave}) {
   const [importedId,setImportedId] = useState(null);
   const [subjectId,setSubjectId] = useState(subject?.id || initialSubjectId || subjects[0]?.id);
   const chosenSubject = subjects.find(s => s.id === subjectId);
@@ -195,6 +195,7 @@ export function AssignmentForm({copying, initialWork, subject, subjects, initial
             return 1;
           }}/>}
         {item.taskId || item.quizId ? <><strong>{item.title}</strong><Disclosure summary={item.kind === "quiz" ? "Обзор теста" : "Обзор задачи"} keepMounted={false}>
+          {renderActivityWorks(item)}
           <TeacherActivityPreview item={item}/>
         </Disclosure></> : <ActivityFields item={item} update={patch => setItems(previous => previous.map(i => i.id === item.id ? {...i,...patch} : i))}/>}
       </fieldset>)}

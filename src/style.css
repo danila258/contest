@@ -200,7 +200,7 @@ h2 {
 .subjectTitleInput { width: 100%; }
 .subjectTitleRow { margin: 0; }
 .subjectForm .subjectTitleRow > :first-child { margin-top: -1.55em; align-self: flex-start; background: var(--g-color-base-background); padding-inline: 5px; }
-.subjectForm fieldset, .subjectForm .subjectTitleRow, .workSubject {
+.subjectForm fieldset, .subjectForm .subjectTitleRow, .workSubject, .activityWorks {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 16px;
@@ -211,7 +211,7 @@ h2 {
   min-width: 0;
 }
 .subjectForm .subjectTitleRow { flex-wrap: nowrap; gap: 0; margin-top: .65em; }
-.subjectForm legend, .workSubject legend {
+.subjectForm legend, .workSubject legend, .activityWorks legend {
   font-weight: 500;
   padding: 0 5px;
 }
@@ -232,6 +232,10 @@ h2 {
 .workSubject {
   overflow-wrap: anywhere;
 }
+.activityWorks ul { display: grid; width: 100%; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.activityWorks li { display: grid; gap: 2px; overflow-wrap: anywhere; }
+.activityWorks li + li { padding-top: 8px; border-top: 1px solid var(--g-color-line-generic); }
+.activityWorks + .teacherPreview { margin-top: 16px; }
 .studentDates { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .studentWorkBody > .studentAssignment { margin-top: 12px; }
 .studentAssignment {

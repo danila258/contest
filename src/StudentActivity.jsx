@@ -5,7 +5,7 @@ import {attemptDeadline, beginAttempt, expireAttempt, finishAttempt, sourceFiles
 
 const CodeEditor = lazy(() => import("./CodeEditor"));
 
-export default function StudentActivity({item, state, due, update, heading, children}) {
+export default function StudentActivity({item, state, due, update, heading, linkedWorks, children}) {
   const [file,setFile] = useState("main.cpp");
   const [error,setError] = useState("");
   const [now,setNow] = useState(Date.now);
@@ -72,6 +72,7 @@ export default function StudentActivity({item, state, due, update, heading, chil
     </aside>}
     <div className="studentActivityPanel">
     <div className="activityToolbar">{heading}</div>
+    {linkedWorks}
     <Card className="studentActivity">
     {!isQuiz && timer}
     {!isQuiz && <MarkdownContent source={item.prompt}/>}

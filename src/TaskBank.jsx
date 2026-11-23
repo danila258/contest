@@ -27,7 +27,7 @@ function PromptPreview({source}) {
 
 const options = items => items.map(({id,title}) => ({value:id, content:title}));
 
-function BankEditor({initial, subjects, tasks, onClose, onSave}) {
+function BankEditor({linkedWorks, initial, subjects, tasks, onClose, onSave}) {
   const [item,setItem] = useState(initial);
   const [error,setError] = useState("");
   const isTask = item.kind === "program";
@@ -45,6 +45,7 @@ function BankEditor({initial, subjects, tasks, onClose, onSave}) {
     <Button size="xl" view="action" type="submit" extraProps={{form:"bank-editor"}}>{item.kind === "quiz" && !initial.existing ? "Создать" : "Сохранить"}</Button>
   </>}>
     <form className="subjectForm" id="bank-editor" onSubmit={submit}>
+      {linkedWorks}
       <fieldset><legend>Предмет</legend>
         <Select aria-label="Предмет материала" disabled={initial.existing} filterable value={[item.subject]} options={subjects.map(s => ({value:s.id,content:subjectOptionTitle(s,subjects)}))}
           onUpdate={([subject]) => update({subject,taskIds:[]})}/>
@@ -64,7 +65,7 @@ function BankEditor({initial, subjects, tasks, onClose, onSave}) {
   </WorkspacePage>;
 }
 
-export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
+export function TaskBank({renderActivityWorks,subjects,tasks,bank,save,renderWorkspace}) {
   const [subject,setSubject] = useState("");
   const [query,setQuery] = useState("");
   const [section,setSection] = useState("tasks");
@@ -81,9 +82,10 @@ export function TaskBank({subjects,tasks,bank,save,renderWorkspace}) {
     (!subject || row.subject === filterBank) && (row.title + " " + promptOf(row)).toLowerCase().includes(query.toLowerCase()));
   function edit(item) { setEditor(item); }
   if (preview) return <WorkspacePage title={preview.title} returnAction={{label:"К банку",onClick:() => setPreview(null)}}>
+    {renderActivityWorks(preview)}
     <TeacherActivityPreview item={preview}/>
   </WorkspacePage>;
-  if (editor) return <BankEditor initial={editor} subjects={subjects} tasks={tasks} onClose={() => setEditor(null)}
+  if (editor) return <BankEditor linkedWorks={editor.existing && ["program","quiz"].includes(editor.kind) && renderActivityWorks(editor)} initial={editor} subjects={subjects} tasks={tasks} onClose={() => setEditor(null)}
     onSave={({existing, ...record}) => {
       record.subject = bankIdOf(subjects.find(s => s.id === record.subject));
       save(current => ({...current, [section]:[...current[section].filter(row => row.id !== record.id),record]}));

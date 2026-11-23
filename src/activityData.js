@@ -34,3 +34,25 @@ export function collectTasks(works) {
   }
   return [...tasks.values()];
 }
+
+// An embedded quiz belongs to its work until copying gives it a bank record.
+export function worksUsingActivity(works, item, ownerId, bankQuizzes) {
+  const isQuiz = item.kind === "quiz";
+  const promotedQuiz = isQuiz && ownerId && bankQuizzes.find(quiz => quiz.sourceWorkId === ownerId && quiz.sourceActivityId === item.id);
+  const quizId = item.quizId ?? promotedQuiz?.id ?? (ownerId ? undefined : item.id);
+  const quiz = isQuiz && bankQuizzes.find(row => row.id === quizId && row.kind === "quiz");
+  const taskId = item.taskId ?? item.id;
+  return works.filter(work => {
+    if (ownerId && work.id === ownerId) return true;
+    if (!work.activities) {
+      return isQuiz ? Boolean(work.question && quiz?.sourceWorkId === work.id && quiz.sourceActivityId === work.id)
+        : Boolean(work.task && work.id === taskId);
+    }
+    return work.activities.some(activity => {
+      if (activity.kind !== item.kind) return false;
+      if (!isQuiz) return (activity.taskId ?? activity.id) === taskId;
+      return Boolean(quizId && activity.quizId === quizId) ||
+        (quiz?.sourceWorkId === work.id && quiz.sourceActivityId === activity.id);
+    });
+  });
+}

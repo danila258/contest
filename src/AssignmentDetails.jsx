@@ -7,7 +7,7 @@ import TeacherActivityPreview from "./TeacherActivityPreview";
 
 import {formatWorkDate, WorkDescription, WorkSubject, WorkSummary} from "./WorkSummary";
 
-export function AssignmentDetails({work, subject, teacher, statistics, activityAttempts, onActivityUpdate, editBlocked, editError, onEdit, onCopy, returnAction}) {
+export function AssignmentDetails({renderActivityWorks, work, subject, teacher, statistics, activityAttempts, onActivityUpdate, editBlocked, editError, onEdit, onCopy, returnAction}) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [query, setQuery] = useState("");
   const selected = work.activities[selectedIndex];
@@ -64,8 +64,9 @@ export function AssignmentDetails({work, subject, teacher, statistics, activityA
           <Text color="secondary">{teacher && `${index + 1}. `}{item.kind === "quiz" ? "Тест" : "Задача на программирование"}</Text>
           <h2>{teacher ? item.title : `${index + 1}. ${item.title}`}</h2>
         </header>;
-        if (teacher) return <Card key={item.id}>{heading}<TeacherActivityPreview item={item}/></Card>;
-        return <StudentActivity key={item.id} item={item} heading={heading} state={activityAttempts[item.id]}
+        const linkedWorks = renderActivityWorks(item,work.id);
+        if (teacher) return <Card key={item.id}>{heading}{linkedWorks}<TeacherActivityPreview item={item}/></Card>;
+        return <StudentActivity key={item.id} item={item} heading={heading} linkedWorks={linkedWorks} state={activityAttempts[item.id]}
           due={Date.parse(work.dueAt)} update={transform => onActivityUpdate(item.id,transform)}>
           {showTasks && work.activities.length > 1 && (
           <nav className="activitySteps" aria-label="Переход между заданиями">

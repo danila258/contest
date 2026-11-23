@@ -34,7 +34,8 @@ import {readSubjects, readWorks, readWorkDraft} from "./importData";
 import { SubjectFilter } from "./SubjectFilter";
 import { SubjectGroups } from "./SubjectGroups";
 import { AssignmentForm } from "./AssignmentForm";
-import {collectTasks, newActivity} from "./activityData";
+import {ActivityWorks} from "./ActivityWorks";
+import {collectTasks, newActivity, worksUsingActivity} from "./activityData";
 import imported from "./imported-data.json";
 import { TaskBank } from "./TaskBank";
 import {editInProgress, withWorkAccess, useWorkBusy} from "./workAccess";
@@ -222,6 +223,11 @@ function Workspace({onLogout}) {
           s.teachers.includes(demoTeacher)
         : studentHasAccess(s,demoStudent),
   );
+  function renderActivityWorks(item, ownerId) {
+    const subjectsById = new Map(all.map(s => [s.id,s]));
+    const available = works.filter(w => subjectsById.has(w.subject) && (teacher || !w.opensAt || Date.parse(w.opensAt) <= now));
+    return <ActivityWorks works={worksUsingActivity(available,item,ownerId,bank.questions)} subjects={subjectsById}/>;
+  }
   const current = currentSemester();
   const listedSubjects = page === "Обзор"
     ? all.filter(s => inCurrentSemester(s, current))
@@ -310,7 +316,7 @@ function Workspace({onLogout}) {
     go("Предметы", saved.teachers.includes(demoTeacher) ? saved : null);
   }
   if (creatingWork && teacher) {
-    return <AssignmentForm copying={creatingWork === "copy"} initialWork={active} subject={active ? subject(active.subject) : selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks} bankQuizzes={bank.questions}
+    return <AssignmentForm renderActivityWorks={renderActivityWorks} copying={creatingWork === "copy"} initialWork={active} subject={active ? subject(active.subject) : selected} subjects={all} initialSubjectId={workSubject} bankTasks={bankTasks} bankQuizzes={bank.questions}
       onImport={(data, fallback) => readWorkDraft(data,selected ? [selected] : all,fallback,bank,demoWorks)}
       onClose={closeForm} onSave={work => {
       const workBankId = bankIdOf(all.find(s => s.id === work.subject));
@@ -382,7 +388,7 @@ function Workspace({onLogout}) {
     const statistics = teacher && (!active.opensAt || Date.parse(active.opensAt) <= now) ? <WorkStatistics subject={subject(active.subject)}
       work={studentWork} currentTotal={active.activities.length} status={status === "Доступна" ? "Не приступал" : status}
       activityAttempts={activityAttempts[active.id] ?? {}} submissions={attempts[active.id] ?? []}/> : null;
-    return <AssignmentDetails work={active} subject={subject(active.subject)} teacher={teacher} onEdit={editWork} onCopy={() => setCreatingWork("copy")}
+    return <AssignmentDetails renderActivityWorks={renderActivityWorks} work={active} subject={subject(active.subject)} teacher={teacher} onEdit={editWork} onCopy={() => setCreatingWork("copy")}
       activityAttempts={activityAttempts[active.id] ?? {}} onActivityUpdate={(id,transform) => updateActivity(active.id,id,transform)}
       statistics={statistics} editBlocked={teacher && busy ? editInProgress : ""}
       editError={editFailure?.id === active.id ? editFailure.message : ""} returnAction={returnAction}/>;
@@ -411,6 +417,7 @@ function Workspace({onLogout}) {
           </aside>}
         <div className="activity studentActivityPanel">
           <WorkSubject subject={subject(active.subject)}/>
+          {renderActivityWorks({kind:active.question ? "quiz" : "program",id:active.id},active.id)}
           <small>Сдать до {workDate(active)}</small>
           <MarkdownContent source={active.question || active.task}/>
           {active.question ? (
@@ -570,7 +577,7 @@ function Workspace({onLogout}) {
     </WorkspaceNavigation>
   );
   if (teacher && page === "Банк задач и тестов") {
-    return <TaskBank subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
+    return <TaskBank renderActivityWorks={renderActivityWorks} subjects={all} tasks={bankTasks} bank={bank} save={updateLibrary} renderWorkspace={renderWorkspace}/>;
   }
   if (catalogue) {
     return renderWorkspace(<article className="bankPage">
