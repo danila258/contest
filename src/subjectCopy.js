@@ -1,3 +1,4 @@
+import {newId} from "./newId.js";
 import {academicYearOf, currentSemester} from "./semester.js";
 import {newActivity} from "./activityData.js";
 
@@ -44,10 +45,10 @@ export function copySubjectLibrary(current, source, target, demos) {
     if (!items && work.question) {
       const quiz = newActivity("quiz");
       items = [{...quiz,title:work.title,questions:[{...quiz.questions[0],prompt:work.question,
-        answers:work.answers.map(text => ({id:crypto.randomUUID(),text,correct:text === work.correct}))}]}];
+        answers:work.answers.map(text => ({id:newId(),text,correct:text === work.correct}))}]}];
     }
     const activities = (items ?? [{taskId:work.id}]).map(item => {
-      const id = crypto.randomUUID();
+      const id = newId();
       if (item.kind === "quiz") return {...structuredClone(item),id};
       const taskId = item.taskId ?? item.id;
       if (!current.tasks.some(task => task.id === taskId && task.subject === bankId)) {
@@ -59,7 +60,7 @@ export function copySubjectLibrary(current, source, target, demos) {
     const opening = work.opensAt ? shiftYear(work.opensAt,years) : new Date(due.getTime());
     if (!work.opensAt) { opening.setDate(opening.getDate()-1); opening.setHours(0,1,0,0); }
     if (opening >= due) opening.setTime(due.getTime() - (Date.parse(work.dueAt) - Date.parse(work.opensAt)));
-    return {id:crypto.randomUUID(), subject:target.id, title:work.title, opensAt:opening.toISOString(),
+    return {id:newId(), subject:target.id, title:work.title, opensAt:opening.toISOString(),
       dueAt:due.toISOString(), sequential:Boolean(work.sequential), review:Boolean(work.review), activities};
   });
   return {...current, copiedSubjects:[...(current.copiedSubjects ?? []),{...target,bankId}],works:[...current.works,...copies]};

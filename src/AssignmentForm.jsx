@@ -1,12 +1,13 @@
+import {newId} from "./newId.js";
 import React, {useId, useState} from "react";
 import {Button, Checkbox, Disclosure, Select, TextInput} from "@gravity-ui/uikit";
 import {DateField, DatePicker} from "@gravity-ui/date-components";
-import {academicYearOf, currentSemester} from "./semester";
+import {academicYearOf, assignmentSubjectLabel, currentSemester} from "./semester";
 import {dateTime} from "@gravity-ui/date-utils";
 import {FormRow} from "@gravity-ui/components";
 import {readActivityDrafts} from "./importData";
 import {savedActivity} from "./activityData";
-import {bankIdOf, subjectOptionTitle} from "./subjectCopy";
+import {bankIdOf} from "./subjectCopy";
 import {JsonImport} from "./JsonImport";
 import {WorkspacePage} from "./WorkspacePage";
 import TeacherActivityPreview from "./TeacherActivityPreview";
@@ -127,7 +128,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
     }
     if (error) return;
     try {
-      onSave({id:initialWork?.id ?? importedId ?? crypto.randomUUID(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
+      onSave({id:initialWork?.id ?? importedId ?? newId(), subject:subjectId, title:title.trim(), opensAt:opensAt.toISOString(),
       dueAt:dueAt.toISOString(), sequential, review, activities:items.map(savedActivity)});
     } catch (failure) {
       setSaveError(failure instanceof DOMException
@@ -141,11 +142,13 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
   </>}>
     <form id="assignment-form" className="subjectForm" onSubmit={submit}>
       {!initialWork && <JsonImport template="works" onImport={importDraft} successMessage="Форма заполнена из файла. Проверьте работу и нажмите «Создать»."/>}
-      {subject ? <span>{subject.title}</span> : <fieldset><legend>Предмет</legend>
-        <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
-          options={subjects.map(s => ({value:s.id, content:subjectOptionTitle(s,subjects)}))} onUpdate={([id]) => changeSubject(id)}/>
-        {items.some(item => item.taskId) && <span>Чтобы сменить предмет, отсоедините задачи из его банка.</span>}
-      </fieldset>}
+      <fieldset><legend>Предмет</legend>
+        {subject ? <span>{assignmentSubjectLabel(subject)}</span> : <>
+          <Select aria-label="Предмет работы" filterable value={[subjectId]} disabled={items.some(item => item.taskId)}
+          options={subjects.map(s => ({value:s.id, content:assignmentSubjectLabel(s)}))} onUpdate={([id]) => changeSubject(id)}/>
+          {items.some(item => item.taskId) && <span>Чтобы сменить предмет, отсоедините задачи из его банка.</span>}
+        </>}
+      </fieldset>
       <FormRow className="subjectTitleRow" direction="column" label="Название работы" fieldId="assignment-title" required>
         <TextInput id="assignment-title" size="l" autoFocus controlProps={{required:true}} value={title} onUpdate={setTitle} placeholder="Например, поиск в отсортированном массиве"/>
       </FormRow>
@@ -188,7 +191,7 @@ export function AssignmentForm({initialWork, subject, subjects, initialSubjectId
         options={availableTasks.map(task => ({value:task.id, content:task.title, disabled:items.some(item => item.taskId === task.id)}))}
         onUpdate={([id]) => {
           const task = availableTasks.find(entry => entry.id === id);
-          if (task) setItems([...items, {...task, taskId:id, id:crypto.randomUUID()}]);
+          if (task) setItems([...items, {...task, taskId:id, id:newId()}]);
         }}/>
       <div className="assignmentControls">{[["quiz","Добавить тест"],["program","Добавить задачу"]].map(([kind,label]) =>
         <Button key={kind} size="l" onClick={() => setItems([...items,newActivity(kind)])}>{label}</Button>)}</div>

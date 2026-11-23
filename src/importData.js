@@ -11,7 +11,7 @@ const text = z.string();
 const nonblank = text.refine(value => value.trim().length > 0, "Введите непустую строку.");
 const title = text.trim().min(1);
 const id = title.refine(value => !Object.hasOwn(Object.prototype,value), "Недопустимый идентификатор.");
-const newId = () => crypto.randomUUID();
+import {newId} from "./newId.js";
 const key = id.optional().default(newId);
 const positive = z.union([z.number(), text.regex(/^[1-9]\d*$/).transform(Number)]).pipe(z.int().positive());
 const minutes = positive.transform(String);

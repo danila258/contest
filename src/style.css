@@ -485,3 +485,17 @@ h2 {
   margin-top: var(--g-spacing-3);
 }
 .activitySteps .g-button_view_action { margin-inline-start: auto; }
+
+.loginPage {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--g-color-base-generic-ultralight);
+}
+.loginCard {
+  width: min(100%, 420px);
+  padding: clamp(20px, 5vw, 32px);
+  background: var(--g-color-base-background);
+}
+.loginCard form { display: grid; gap: 16px; margin-top: 16px; }

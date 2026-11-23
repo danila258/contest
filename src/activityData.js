@@ -1,6 +1,6 @@
 import {starter, works as demos} from "./data.js";
 
-const id = () => crypto.randomUUID();
+import {newId as id} from "./newId.js";
 export const answer = () => ({id: id(), text: "", correct: false});
 export const question = () => ({id: id(), prompt: "", minutes: "5", answers: [answer(), answer()]});
 export const testCase = () => ({id: id(), input: "", output: "", code: ""});

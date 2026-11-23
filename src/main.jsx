@@ -1,3 +1,4 @@
+import {newId} from "./newId.js";
 import React, { useState } from "react";
 import { settings as dateSettings } from "@gravity-ui/date-utils";
 import { createRoot } from "react-dom/client";
@@ -45,6 +46,7 @@ import {demoGroup, demoStudent, demoTeacher, studentHasAccess} from "./subjectOp
 import {bankIdOf, copySubjectLibrary, referenceWorkTasks, resolveWorkTasks} from "./subjectCopy";
 import { SubjectSettings } from "./SubjectSettings";
 
+import { LoginPage } from "./LoginPage";
 import { WorkspaceNavigation } from "./WorkspaceNavigation";
 
 import MarkdownContent from "./MarkdownContent";
@@ -99,6 +101,19 @@ const statusThemes = {
   "На доработке": "warning",
 };
 function App() {
+  const sessionKey = "practice.demoSession";
+  const [signedIn, setSignedIn] = useState(() => sessionStorage.getItem(sessionKey) === "active");
+  if (!signedIn) return <LoginPage onLogin={() => {
+    sessionStorage.setItem(sessionKey, "active");
+    setSignedIn(true);
+  }}/>;
+  return <Workspace onLogout={() => {
+    sessionStorage.removeItem(sessionKey);
+    setSignedIn(false);
+  }}/>;
+}
+
+function Workspace({onLogout}) {
   const [page, pageSet] = useState("Обзор"),
     [selected, select] = useState(null),
     [filter, filterSet] = useState("Все статусы");
@@ -259,14 +274,14 @@ function App() {
   }
   function saveSubject(settings) {
     if (settingsOpen === "copy") {
-      const copy = {...settings,id:crypto.randomUUID(),teacher:demoTeacher,bankId:bankIdOf(selected)};
+      const copy = {...settings,id:newId(),teacher:demoTeacher,bankId:bankIdOf(selected)};
       updateLibrary(current => copySubjectLibrary(current,selected,copy,datedDemoWorks));
       showSettings(false);
       go("Предметы",copy);
       return;
     }
     const base = selected ?? {
-      id: crypto.randomUUID(),
+      id: newId(),
       teacher: demoTeacher,
     };
     const saved = { ...base, ...settings };
@@ -530,6 +545,7 @@ function App() {
               go("Обзор");
             }}
           />
+          <Button view="flat" onClick={onLogout}>Выйти</Button>
         </header>
         {content}
       </main>
